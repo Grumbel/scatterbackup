@@ -16,10 +16,12 @@
 
 
 from .main import main
+from .fileinfo import FileInfo
 
 
 __all__ = [
-    'main'
+    'main',
+    'FileInfo'
 ]
 
 

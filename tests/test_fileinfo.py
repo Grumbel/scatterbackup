@@ -30,7 +30,9 @@ class FileInfoTestCase(unittest.TestCase):
 
     def test_json(self):
         fileinfo = FileInfo.from_file("tests/test.txt")
-        fileinfo.json()
+        jstxt = fileinfo.json()
+        fileinfo2 = FileInfo.from_json(jstxt)
+        self.assertEqual(fileinfo, fileinfo2)
 
 
 if __name__ == '__main__':

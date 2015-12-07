@@ -19,6 +19,7 @@ import hashlib
 import socket
 import os
 import json
+from collections import OrderedDict
 
 
 class FileInfo:
@@ -38,41 +39,93 @@ class FileInfo:
         self.size = size
 
     def json(self):
-        js = {'path': self.path}
+        # use OrderedDict to create pretty and deterministic output
+        fileinfo = OrderedDict()
+        js = OrderedDict([
+            ('path', self.path),
+            ('mtime', self.mtime),
+            ('type', 'file'),
+            ('info', fileinfo)
+        ])
+
         if self.host:
-            js['host'] = self.host
+            js['host']
+
         if self.md5:
-            js['md5'] = self.md5
+            fileinfo['md5'] = self.md5
         if self.sha1:
-            js['sha1'] = self.sha1
-        if self.mtime:
-            js['mtime'] = self.mtime
+            fileinfo['sha1'] = self.sha1
         if self.size:
-            js['size'] = self.size
+            fileinfo['size'] = self.size
+
         return json.dumps(js)
 
-    @staticmethod
-    def from_file(path):
-        abspath = os.path.abspath(path)
-        host = socket.getfqdn()
-        statinfo = os.stat(path)
-        statinfo
+    def __eq__(self, other):
+        if type(other) is type(self):
+            return self.__dict__ == other.__dict__
+        else:
+            return False
 
-        size = 0
-        md5 = hashlib.md5()
-        sha1 = hashlib.sha1()
-        with open(path, 'rb') as fin:
-            data = fin.read(16384)
-            while data:
-                size += len(data)
-                md5.update(data)
-                sha1.update(data)
-                data = fin.read(16384)
+    @staticmethod
+    def from_file(path, checksums=True, relative=False, host=None):
+        abspath = path if relative else os.path.abspath(path)
+        if host is None:
+            host = socket.getfqdn()
+        elif host == "":
+            host = None
+        statinfo = os.lstat(path)
+        mtime = statinfo.st_mtime_ns
+        # st_mode=17407, st_ino=280, st_dev=23, st_nlink=1, st_uid=0, st_gid=0, st_size=1178,
+        # st_atime=1449495214,
+        # st_mtime=1449498613,
+        # st_ctime=1449498613)
+
+        if not checksums:
+            size = statinfo.st_size
+            md5_hex = None
+            sha1_hex = None
+        else:
+            size = 0
+            md5 = hashlib.md5()
+            sha1 = hashlib.sha1()
+            with open(path, 'rb') as fin:
+                data = fin.read(65536)
+                while data:
+                    size += len(data)
+                    md5.update(data)
+                    sha1.update(data)
+                    data = fin.read(16384)
+
+            md5_hex = md5.hexdigest()
+            sha1_hex = sha1.hexdigest()
 
         return FileInfo(path=abspath,
                         host=host,
-                        md5=md5.hexdigest(),
-                        sha1=sha1.hexdigest(),
+                        mtime=mtime,
+                        md5=md5_hex,
+                        sha1=sha1_hex,
                         size=size)
+
+    @staticmethod
+    def from_json(text):
+        js = json.loads(text)
+        path = js.get('path')
+        host = js.get('host')
+        objtype = js.get('type')
+        mtime = js.get('mtime')
+        if objtype != 'file':
+            raise "unknown type: {}".format(file)
+        else:
+            info = js['info']
+            md5_hex = info.get('md5')
+            sha1_hex = info.get('sha1')
+            size = info.get('size')
+            return FileInfo(path=path,
+                            host=host,
+                            mtime=mtime,
+                            md5=md5_hex,
+                            sha1=sha1_hex,
+                            size=size)
+
 
 # EOF #
