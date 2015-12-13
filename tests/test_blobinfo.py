@@ -16,23 +16,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
 import unittest
-from scatterbackup.fileinfo import FileInfo
+from scatterbackup import BlobInfo
 
 
-class FileInfoTestCase(unittest.TestCase):
+class BlobInfoTestCase(unittest.TestCase):
 
     def test_from_file(self):
-        fileinfo = FileInfo.from_file("tests/test.txt")
-        self.assertEqual(11, fileinfo.size)
-        self.assertEqual("6df4d50a41a5d20bc4faad8a6f09aa8f", fileinfo.blob.md5)
-        self.assertEqual("bc9faaae1e35d52f3dea9651da12cd36627b8403", fileinfo.blob.sha1)
-
-    # def test_json(self):
-    #     fileinfo = FileInfo.from_file("tests/test.txt")
-    #     jstxt = fileinfo.json()
-    #     fileinfo2 = FileInfo.from_json(jstxt)
-    #     self.assertEqual(fileinfo, fileinfo2)
+        blobinfo = BlobInfo.from_file("tests/test.txt")
+        self.assertEqual(11, blobinfo.size)
+        self.assertEqual("6df4d50a41a5d20bc4faad8a6f09aa8f", blobinfo.md5)
+        self.assertEqual("bc9faaae1e35d52f3dea9651da12cd36627b8403", blobinfo.sha1)
 
 
 if __name__ == '__main__':

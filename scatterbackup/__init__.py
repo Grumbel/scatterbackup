@@ -17,11 +17,13 @@
 
 from .main import main
 from .fileinfo import FileInfo
+from .blobinfo import BlobInfo
 
 
 __all__ = [
     'main',
-    'FileInfo'
+    'FileInfo',
+    'BlobInfo'
 ]
 
 

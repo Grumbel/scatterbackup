@@ -24,11 +24,11 @@ import sys
 def process_directory(dir, checksums, relative, host, quiet):
     filecount = 0
     for root, dirs, files in os.walk(dir):
-        filecount += len(files)
+        filecount += len(files) + len(dirs)
 
     fileidx = 1
     for root, dirs, files in os.walk(dir):
-        for f in files:
+        for f in files + dirs:
             p = os.path.join(root, f)
             fileinfo = scatterbackup.FileInfo.from_file(p, checksums=checksums, relative=relative, host=host)
             print(fileinfo.json())

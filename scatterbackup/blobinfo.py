@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # ScatterBackup - A chaotic backup solution
 # Copyright (C) 2015 Ingo Ruhnke <grumbel@gmail.com>
 #
@@ -16,27 +14,35 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import unittest
-from scatterbackup.fileinfo import FileInfo
+
+import hashlib
 
 
-class FileInfoTestCase(unittest.TestCase):
+class BlobInfo:
 
-    def test_from_file(self):
-        fileinfo = FileInfo.from_file("tests/test.txt")
-        self.assertEqual(11, fileinfo.size)
-        self.assertEqual("6df4d50a41a5d20bc4faad8a6f09aa8f", fileinfo.blob.md5)
-        self.assertEqual("bc9faaae1e35d52f3dea9651da12cd36627b8403", fileinfo.blob.sha1)
+    def __init__(self, size, md5=None, sha1=None):
+        self.size = size
+        self.sha1 = sha1
+        self.md5 = md5
 
-    # def test_json(self):
-    #     fileinfo = FileInfo.from_file("tests/test.txt")
-    #     jstxt = fileinfo.json()
-    #     fileinfo2 = FileInfo.from_json(jstxt)
-    #     self.assertEqual(fileinfo, fileinfo2)
+    @staticmethod
+    def from_file(path):
+        """Calculate size, md5 and sha1 for a given file"""
+        size = 0
+        md5 = hashlib.md5()
+        sha1 = hashlib.sha1()
+        with open(path, 'rb') as fin:
+            data = fin.read(65536)
+            while data:
+                size += len(data)
+                md5.update(data)
+                sha1.update(data)
+                data = fin.read(16384)
 
+        md5_hex = md5.hexdigest()
+        sha1_hex = sha1.hexdigest()
 
-if __name__ == '__main__':
-    unittest.main()
+        return BlobInfo(size, md5_hex, sha1_hex)
 
 
 # EOF #
