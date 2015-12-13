@@ -160,7 +160,7 @@ class FileInfo:
         if stat.S_ISREG(statinfo.st_mode) and checksums:
             result.blob = BlobInfo.from_file(abspath)
         elif stat.S_ISLNK(statinfo.st_mode):
-            result.target = readlink(abspath)
+            result.target = os.readlink(abspath)
 
         return result
 
