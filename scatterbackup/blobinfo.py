@@ -25,6 +25,11 @@ class BlobInfo:
         self.sha1 = sha1
         self.md5 = md5
 
+    def __eq__(self, other):
+        return (self.size == other.size and
+                self.sha1 == other.sha1 and
+                self.md5 == other.md5)
+
     @staticmethod
     def from_file(path):
         """Calculate size, md5 and sha1 for a given file"""
