@@ -15,29 +15,57 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import os
 import argparse
+import os
 import scatterbackup
+import socket
 import sys
 
 
-def process_directory(dir, checksums, relative, host, quiet):
+def on_progress(index, count, pathname):
+    sys.stderr.write("[{}% {}/{}] {}\n".format(int(index/count * 100),
+                                               index, count,
+                                               pathname))
+    sys.stderr.flush()
+
+
+def on_progress_quiet(index, count, pathname):
+    pass
+
+
+def on_report(fileinfo, fout=sys.stdout):
+    fout.write(fileinfo.json())
+    fout.write("\n")
+
+
+def process_directory(dir, checksums, relative, prefix, host,
+                      on_report_cb,
+                      on_progress_cb=on_progress_quiet):
+
+    if host is None:
+        host = socket.getfqdn()
+
     filecount = 0
     for root, dirs, files in os.walk(dir):
         filecount += len(files) + len(dirs)
 
+    if prefix is not None:
+        relative = True
+
     fileidx = 1
     for root, dirs, files in os.walk(dir):
         for f in files + dirs:
-            p = os.path.join(root, f)
-            fileinfo = scatterbackup.FileInfo.from_file(p, checksums=checksums, relative=relative, host=host)
-            print(fileinfo.json())
+            p = os.path.normpath(os.path.join(root, f))
+            fileinfo = scatterbackup.FileInfo.from_file(p,
+                                                        checksums=checksums,
+                                                        relative=relative,
+                                                        host=host)
 
-            if not quiet:
-                sys.stderr.write("[{}% {}/{}] {}\n".format(int(fileidx/filecount * 100),
-                                                           fileidx, filecount,
-                                                           p))
-                sys.stderr.flush()
+            if prefix is not None:
+                fileinfo.path = os.path.join(prefix, fileinfo.path)
+
+            on_report_cb(fileinfo)
+            on_progress_cb(fileidx, filecount, fileinfo.path)
 
             fileidx += 1
 
@@ -54,10 +82,14 @@ def main():
                         help="don't calculate checksums")
     parser.add_argument('-R', '--relative', action='store_true', default=False,
                         help="Path names are stored relative")
+    parser.add_argument('-p', '--prefix', type=str, default=None,
+                        help="Use a fake prefix to make a relative path absolute")
     parser.add_argument('--host', type=str, default=None,
                         help="Set the host name")
     parser.add_argument('-H', '--no-host', action='store_true', default=False,
                         help="Set the host name to None")
+    parser.add_argument('-o', '--output', type=str, default=None,
+                        help="Set the output filename")
     args = parser.parse_args()
 
     if args.no_host:
@@ -65,8 +97,15 @@ def main():
     else:
         host = args.host
 
+    on_report_cb = lambda fileinfo: on_report(fileinfo)
+    if args.output:
+        fout = open(args.output, "w")
+        on_report_cb = lambda fileinfo, fout=fout: on_report(fileinfo, fout)
+
     for d in args.DIRECTORY:
-        process_directory(d, not args.no_checksum, args.relative, host, args.quiet)
+        process_directory(d, not args.no_checksum, args.relative, args.prefix, host,
+                          on_report_cb,
+                          on_progress_quiet if args.quiet else on_progress)
 
 
 # EOF #
