@@ -24,7 +24,8 @@ setup(name='scatterbackup',
       version='0.1.0',
       scripts=[],
       entry_points={
-          'console_scripts': ['sb-maketree = scatterbackup.maketree:main'],
+          'console_scripts': ['sb-maketree = scatterbackup.maketree:main',
+                              'sb-diff = scatterbackup.diff:main'],
           'gui_scripts': []
           },
       packages=['scatterbackup'])
