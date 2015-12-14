@@ -18,7 +18,7 @@ SOURCES := $(wildcard \
   sexp/*.py \
   tests/*.py)
 
-all: flake test # autopep
+all: flake test install # autopep
 
 autopep:
 	autopep8  --max-line=120  --in-place $(SOURCES)
@@ -40,6 +40,9 @@ pylint: $(PYLINT_TARGETS)
 
 clean:
 	rm -vrf .pylint/
+
+install:
+	pip3 install .
 
 .PHONY: autopep test flake pylint clean
 
