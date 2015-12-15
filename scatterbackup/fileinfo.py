@@ -17,7 +17,6 @@
 
 from collections import OrderedDict
 from scatterbackup.blobinfo import BlobInfo
-import hashlib
 import json
 import os
 import socket
@@ -66,40 +65,43 @@ class FileInfo:
         # use OrderedDict to create pretty and deterministic output
         js = OrderedDict()
 
-        if self.kind is not None: js['type'] = self.kind
+        def assign(name, value):
+            if value is not None:
+                js[name] = value
 
-        js['path'] = self.path
+        assign('type', self.kind)
+        assign('path', self.path)
+        assign('host', self.host)
 
-        if self.host is not None: js['host'] = self.host
+        assign('dev', self.dev)
+        assign('ino', self.ino)
 
-        if self.dev is not None: js['dev'] = self.dev
-        if self.ino is not None: js['ino'] = self.ino
+        assign('mode', self.mode)
+        assign('nlink', self.nlink)
 
-        if self.mode is not None: js['mode'] = self.mode
-        if self.nlink is not None: js['nlink'] = self.nlink
+        assign('uid', self.uid)
+        assign('gid', self.gid)
 
-        if self.uid is not None: js['uid'] = self.uid
-        if self.gid is not None: js['gid'] = self.gid
+        assign('rdev', self.rdev)
 
-        if self.rdev is not None: js['rdev'] = self.rdev
+        assign('size', self.size)
+        assign('blksize', self.blksize)
+        assign('blocks', self.blocks)
 
-        if self.size is not None: js['size'] = self.size
-        if self.blksize is not None: js['blksize'] = self.blksize
-        if self.blocks is not None: js['blocks'] = self.blocks
-
-        if self.atime is not None: js['atime'] = self.atime
-        if self.ctime is not None: js['ctime'] = self.ctime
-        if self.mtime is not None: js['mtime'] = self.mtime
+        assign('atime', self.atime)
+        assign('ctime', self.ctime)
+        assign('mtime', self.mtime)
 
         if self.blob is not None:
             js['blob'] = OrderedDict([('size', self.size)])
-            if self.blob.sha1 is not None: js['blob']['sha1'] = self.blob.sha1
-            if self.blob.md5 is not None: js['blob']['md5'] = self.blob.md5
+            if self.blob.sha1 is not None:
+                js['blob']['sha1'] = self.blob.sha1
+            if self.blob.md5 is not None:
+                js['blob']['md5'] = self.blob.md5
 
-        if self.target is not None:
-            js['target'] = self.target
+        assign('target', self.target)
 
-        if self.time is not None: js['time'] = self.time
+        assign('time', self.time)
 
         return json.dumps(js)
 

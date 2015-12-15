@@ -99,10 +99,14 @@ def main():
     else:
         host = args.host
 
-    on_report_cb = lambda fileinfo: on_report(fileinfo)
+    on_report_cb = on_report
     if args.output:
         fout = open(args.output, "w")
-        on_report_cb = lambda fileinfo, fout=fout: on_report(fileinfo, fout)
+
+        def on_report_with_file(fileinfo, fout=fout):
+            on_report(fileinfo, fout)
+
+        on_report_cb = on_report_with_file
 
     for d in args.DIRECTORY:
         process_directory(d, not args.no_checksum, args.relative, args.prefix, host,
