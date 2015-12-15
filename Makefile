@@ -33,7 +33,7 @@ PYLINT_TARGETS := $(addprefix .pylint/, $(SOURCES))
 
 $(PYLINT_TARGETS): .pylint/%.py: %.py
 	mkdir -p $(dir $@)
-	PYTHONPATH=. epylint3 $<
+	PYTHONPATH=. epylint3 $< --rcfile=.pylintrc --max-line-length=120
 	touch $@
 
 pylint: $(PYLINT_TARGETS)
