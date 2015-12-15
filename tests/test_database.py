@@ -17,20 +17,22 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from setuptools import setup, find_packages
+import unittest
+from scatterbackup.database import Database
+from scatterbackup.fileinfo import FileInfo
 
 
-setup(name='scatterbackup',
-      version='0.1.0',
-      scripts=[],
-      entry_points={
-          'console_scripts': ['sb-maketree = scatterbackup.maketree:main',
-                              'sb-diff = scatterbackup.diff:main',
-                              'sb-ncdu = scatterbackup.ncdu:main',
-                              'sb-dbtool = scatterbackup.dbtool:main'],
-          'gui_scripts': []
-          },
-      packages=['scatterbackup'])
+class DatabaseTestCase(unittest.TestCase):
+
+    def test_database(self):
+        db = Database(":memory:")
+        db.init_tables()
+        db.store(FileInfo.from_file("tests/test.txt"))
+        db.store(FileInfo.from_file("tests/symlink.lnk"))
+
+
+if __name__ == '__main__':
+    unittest.main()
 
 
 # EOF #
