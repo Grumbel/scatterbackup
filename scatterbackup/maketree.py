@@ -52,6 +52,8 @@ def process_directory(dir, checksums, relative, prefix, host,
     if prefix is not None:
         relative = True
 
+    on_report_cb(scatterbackup.FileInfo.from_file(dir))
+
     fileidx = 1
     for root, dirs, files in os.walk(dir):
         for f in files + dirs:
