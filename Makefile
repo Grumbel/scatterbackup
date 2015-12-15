@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 SOURCES := $(wildcard \
-  sexp/*.py \
+  scatterbackup/*.py \
   tests/*.py)
 
 all: flake test install # autopep
@@ -33,7 +33,7 @@ PYLINT_TARGETS := $(addprefix .pylint/, $(SOURCES))
 
 $(PYLINT_TARGETS): .pylint/%.py: %.py
 	mkdir -p $(dir $@)
-	PYTHONPATH=. epylint $<
+	PYTHONPATH=. epylint3 $<
 	touch $@
 
 pylint: $(PYLINT_TARGETS)
