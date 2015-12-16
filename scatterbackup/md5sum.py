@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # ScatterBackup - A chaotic backup solution
 # Copyright (C) 2015 Ingo Ruhnke <grumbel@gmail.com>
 #
@@ -17,22 +15,20 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from setuptools import setup, find_packages
+import argparse
+import scatterbackup.diff
 
 
-setup(name='scatterbackup',
-      version='0.1.0',
-      scripts=[],
-      entry_points={
-          'console_scripts': ['sb-maketree = scatterbackup.maketree:main',
-                              'sb-diff = scatterbackup.diff:main',
-                              'sb-ncdu = scatterbackup.ncdu:main',
-                              'sb-dbtool = scatterbackup.dbtool:main',
-                              'sb-md5sum = scatterbackup.md5sum:main',
-                              'sb-sha1sum = scatterbackup.sha1sum:main'],
-          'gui_scripts': []
-          },
-      packages=['scatterbackup'])
+def main():
+    parser = argparse.ArgumentParser(description='Convert .sbtr to md5sum syntax')
+    parser.add_argument('FILE', action='store', type=str, nargs=1,
+                        help='.sbtr file to load')
+    args = parser.parse_args()
+
+    fileinfos = scatterbackup.diff.fileinfos_from_file(args.FILE[0])
+    for fileinfo in sorted(fileinfos.values(), key=lambda x: x.path):
+        if fileinfo.blob is not None:
+            print("{}  {}".format(fileinfo.blob.md5, fileinfo.path))
 
 
 # EOF #
