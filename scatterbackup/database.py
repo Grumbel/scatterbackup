@@ -30,7 +30,6 @@ class Database:
                     "id INTEGER PRIMARY KEY, " +
                     "type TEXT, " +
                     "path TEXT, " +
-                    "host TEXT, " +
 
                     "dev INTEGER, " +
                     "ino INTEGER, " +
@@ -73,10 +72,9 @@ class Database:
         print("store...", fileinfo.path)
         cur = self.con.cursor()
         cur.execute("INSERT INTO fileinfo VALUES" +
-                    "(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    "(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (fileinfo.kind,
                      fileinfo.path,
-                     fileinfo.host,
                      fileinfo.dev,
                      fileinfo.ino,
                      fileinfo.mode,
@@ -119,21 +117,20 @@ class Database:
             # rowid = row[0]
             fileinfo.kind = row[1]
             fileinfo.path = row[2]
-            fileinfo.host = row[3]
-            fileinfo.dev = row[4]
-            fileinfo.ino = row[5]
-            fileinfo.mode = row[6]
-            fileinfo.nlink = row[7]
-            fileinfo.uid = row[8]
-            fileinfo.gid = row[9]
-            fileinfo.rdev = row[10]
-            fileinfo.size = row[11]
-            fileinfo.blksize = row[12]
-            fileinfo.blocks = row[13]
-            fileinfo.atime = row[14]
-            fileinfo.ctime = row[15]
-            fileinfo.mtime = row[16]
-            fileinfo.time = row[17]
+            fileinfo.dev = row[3]
+            fileinfo.ino = row[4]
+            fileinfo.mode = row[5]
+            fileinfo.nlink = row[6]
+            fileinfo.uid = row[7]
+            fileinfo.gid = row[8]
+            fileinfo.rdev = row[9]
+            fileinfo.size = row[10]
+            fileinfo.blksize = row[11]
+            fileinfo.blocks = row[12]
+            fileinfo.atime = row[13]
+            fileinfo.ctime = row[14]
+            fileinfo.mtime = row[15]
+            fileinfo.time = row[16]
 
             return fileinfo
 

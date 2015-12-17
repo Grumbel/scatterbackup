@@ -27,12 +27,8 @@ def on_report(fileinfo, fout=sys.stdout):
     fout.write("\n")
 
 
-def process_directory(dir, checksums, relative, prefix, host,
+def process_directory(dir, checksums, relative, prefix,
                       on_report_cb):
-
-    if host is None:
-        host = socket.getfqdn()
-
     filecount = 0
     for root, dirs, files in os.walk(dir):
         filecount += len(files) + len(dirs)
@@ -48,8 +44,7 @@ def process_directory(dir, checksums, relative, prefix, host,
             p = os.path.normpath(os.path.join(root, f))
             fileinfo = scatterbackup.FileInfo.from_file(p,
                                                         checksums=checksums,
-                                                        relative=relative,
-                                                        host=host)
+                                                        relative=relative)
 
             if prefix is not None:
                 fileinfo.path = os.path.join(prefix, fileinfo.path)
@@ -81,11 +76,6 @@ def main():
                         help="Set the output filename")
     args = parser.parse_args()
 
-    if args.no_host:
-        host = ""
-    else:
-        host = args.host
-
     on_report_cb = on_report
     if args.output:
         fout = open(args.output, "w")
@@ -96,8 +86,7 @@ def main():
         on_report_cb = on_report_with_file
 
     for d in args.DIRECTORY:
-        process_directory(d, not args.no_checksum, args.relative, args.prefix, host,
-                          on_report_cb)
+        process_directory(d, not args.no_checksum, args.relative, args.prefix, on_report_cb)
 
 
 # EOF #

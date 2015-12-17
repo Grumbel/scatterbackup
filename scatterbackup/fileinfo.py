@@ -29,7 +29,6 @@ class FileInfo:
     def __init__(self, path):
         self.kind = None
         self.path = path
-        self.host = None
 
         self.dev = None
         self.ino = None
@@ -71,7 +70,6 @@ class FileInfo:
 
         assign('type', self.kind)
         assign('path', self.path)
-        assign('host', self.host)
 
         assign('dev', self.dev)
         assign('ino', self.ino)
@@ -106,17 +104,10 @@ class FileInfo:
         return json.dumps(js)
 
     @staticmethod
-    def from_file(path, checksums=True, relative=False, host=None):
+    def from_file(path, checksums=True, relative=False):
         abspath = path if relative else os.path.abspath(path)
 
         result = FileInfo(abspath)
-
-        if host is None:
-            result.host = socket.getfqdn()
-        elif host == "":
-            result.host = None
-        else:
-            result.host = host
 
         statinfo = os.lstat(path)
 
@@ -173,7 +164,6 @@ class FileInfo:
 
         result = FileInfo(path)
         result.kind = js.get('type')
-        result.host = js.get('host')
         result.dev = js.get('dev')
         result.ino = js.get('ino')
 
