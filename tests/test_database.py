@@ -17,6 +17,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import os
 import unittest
 from scatterbackup.database import Database
 from scatterbackup.fileinfo import FileInfo
@@ -29,6 +30,8 @@ class DatabaseTestCase(unittest.TestCase):
         db.init_tables()
         db.store(FileInfo.from_file("tests/test.txt"))
         db.store(FileInfo.from_file("tests/symlink.lnk"))
+        fileinfo = db.get_by_path(os.path.abspath("tests/test.txt"))
+        self.assertEqual(fileinfo.path, os.path.abspath("tests/test.txt"))
 
 
 if __name__ == '__main__':

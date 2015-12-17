@@ -16,6 +16,7 @@
 
 
 import sqlite3
+from scatterbackup.fileinfo import FileInfo
 
 
 class Database:
@@ -102,6 +103,39 @@ class Database:
             cur.execute("INSERT INTO linkinfo VALUES" +
                         "(NULL, ?, ?)",
                         (fileinfo_id, fileinfo.target))
+
+    def get_by_path(self, path):
+        cur = self.con.cursor()
+        cur.execute("SELECT * FROM fileinfo WHERE path = ?", (path,))
+        rows = cur.fetchall()
+        if len(rows) > 1:
+            raise Exception("duplicates in database")
+        elif len(rows) == 0:
+            return None
+        else:
+            row = rows[0]
+            fileinfo = FileInfo(path)
+
+            # rowid = row[0]
+            fileinfo.kind = row[1]
+            fileinfo.path = row[2]
+            fileinfo.host = row[3]
+            fileinfo.dev = row[4]
+            fileinfo.ino = row[5]
+            fileinfo.mode = row[6]
+            fileinfo.nlink = row[7]
+            fileinfo.uid = row[8]
+            fileinfo.gid = row[9]
+            fileinfo.rdev = row[10]
+            fileinfo.size = row[11]
+            fileinfo.blksize = row[12]
+            fileinfo.blocks = row[13]
+            fileinfo.atime = row[14]
+            fileinfo.ctime = row[15]
+            fileinfo.mtime = row[16]
+            fileinfo.time = row[17]
+
+            return fileinfo
 
     def commit(self):
         self.con.commit()
