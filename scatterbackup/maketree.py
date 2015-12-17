@@ -22,25 +22,13 @@ import socket
 import sys
 
 
-def on_progress(index, count, pathname):
-    sys.stderr.write("[{}% {}/{}] {}\n".format(int(index/count * 100),
-                                               index, count,
-                                               pathname))
-    sys.stderr.flush()
-
-
-def on_progress_quiet(index, count, pathname):
-    pass
-
-
 def on_report(fileinfo, fout=sys.stdout):
     fout.write(fileinfo.json())
     fout.write("\n")
 
 
 def process_directory(dir, checksums, relative, prefix, host,
-                      on_report_cb,
-                      on_progress_cb=on_progress_quiet):
+                      on_report_cb):
 
     if host is None:
         host = socket.getfqdn()
@@ -67,7 +55,6 @@ def process_directory(dir, checksums, relative, prefix, host,
                 fileinfo.path = os.path.join(prefix, fileinfo.path)
 
             on_report_cb(fileinfo)
-            on_progress_cb(fileidx, filecount, fileinfo.path)
 
             fileidx += 1
 
@@ -110,8 +97,7 @@ def main():
 
     for d in args.DIRECTORY:
         process_directory(d, not args.no_checksum, args.relative, args.prefix, host,
-                          on_report_cb,
-                          on_progress_quiet if args.quiet else on_progress)
+                          on_report_cb)
 
 
 # EOF #
