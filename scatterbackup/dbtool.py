@@ -33,7 +33,6 @@ def main():
     args = parser.parse_args()
 
     db = scatterbackup.database.Database(args.DATABASE[0])
-    db.init_tables()
 
     if args.import_file is not None:
         logging.info("loading %s", args.import_file)

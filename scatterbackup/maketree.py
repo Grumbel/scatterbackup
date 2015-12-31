@@ -16,10 +16,9 @@
 
 
 import argparse
-import os
 import scatterbackup
-import socket
 import sys
+from scatterbackup.generator import generate_fileinfos
 
 
 def on_report(fileinfo, fout=sys.stdout):
@@ -27,31 +26,17 @@ def on_report(fileinfo, fout=sys.stdout):
     fout.write("\n")
 
 
-def process_directory(dir, checksums, relative, prefix,
+def process_directory(directory, checksums, relative, prefix,
                       on_report_cb):
-    filecount = 0
-    for root, dirs, files in os.walk(dir):
-        filecount += len(files) + len(dirs)
-
     if prefix is not None:
         relative = True
 
-    on_report_cb(scatterbackup.FileInfo.from_file(dir))
+    on_report_cb(scatterbackup.FileInfo.from_file(directory))
 
     fileidx = 1
-    for root, dirs, files in os.walk(dir):
-        for f in files + dirs:
-            p = os.path.normpath(os.path.join(root, f))
-            fileinfo = scatterbackup.FileInfo.from_file(p,
-                                                        checksums=checksums,
-                                                        relative=relative)
-
-            if prefix is not None:
-                fileinfo.path = os.path.join(prefix, fileinfo.path)
-
-            on_report_cb(fileinfo)
-
-            fileidx += 1
+    for fileinfo in generate_fileinfos(directory, relative=relative, prefix=prefix, checksums=checksums):
+        on_report_cb(fileinfo)
+        fileidx += 1
 
 
 def main():
@@ -72,6 +57,8 @@ def main():
                         help="Set the host name")
     parser.add_argument('-H', '--no-host', action='store_true', default=False,
                         help="Set the host name to None")
+    parser.add_argument('-d', '--database', type=str, default=None,
+                        help="Store results in database")
     parser.add_argument('-o', '--output', type=str, default=None,
                         help="Set the output filename")
     args = parser.parse_args()
@@ -85,8 +72,19 @@ def main():
 
         on_report_cb = on_report_with_file
 
+    if args.database:
+        db = scatterbackup.Database(args.database)
+
+        def on_report_with_database(fileinfo):
+            db.store(fileinfo)
+
+        on_report_cb = on_report_with_database
+
     for d in args.DIRECTORY:
         process_directory(d, not args.no_checksum, args.relative, args.prefix, on_report_cb)
+
+    if args.database:
+        db.commit()
 
 
 # EOF #

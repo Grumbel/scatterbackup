@@ -23,6 +23,7 @@ class Database:
 
     def __init__(self, filename):
         self.con = sqlite3.connect(filename)
+        self.init_tables()
 
     def init_tables(self):
         cur = self.con.cursor()
