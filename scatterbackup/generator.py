@@ -27,29 +27,27 @@ def generate_fileinfos(directory,
                        checksums=False):
 
     directory_generator = os.walk(directory)
-
     scatterbackup.util.advance_walk_to(directory_generator, startdirectory)
 
+    if prefix is not None:
+        relative = True
+
+    yield FileInfo.from_file(directory)
+
+    fileidx = 1
     for root, dirs, files in directory_generator:
-        if prefix is not None:
-            relative = True
+        for f in files + dirs:
+            p = os.path.normpath(os.path.join(root, f))
+            fileinfo = scatterbackup.FileInfo.from_file(p,
+                                                        checksums=checksums,
+                                                        relative=relative)
 
-        yield FileInfo.from_file(directory)
+            if prefix is not None:
+                fileinfo.path = os.path.join(prefix, fileinfo.path)
 
-        fileidx = 1
-        for root, dirs, files in os.walk(directory):
-            for f in files + dirs:
-                p = os.path.normpath(os.path.join(root, f))
-                fileinfo = scatterbackup.FileInfo.from_file(p,
-                                                            checksums=checksums,
-                                                            relative=relative)
+            yield fileinfo
 
-                if prefix is not None:
-                    fileinfo.path = os.path.join(prefix, fileinfo.path)
-
-                yield fileinfo
-
-                fileidx += 1
+            fileidx += 1
 
 
 # EOF #
