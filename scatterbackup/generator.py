@@ -20,11 +20,24 @@ import scatterbackup.util
 import os
 
 
-def generate_fileinfos(directory,
+def generate_fileinfos(path,
                        startdirectory=None,
                        relative=False,
                        prefix=None,
                        checksums=False):
+    if os.path.isdir(path):
+        yield from generate_fileinfos_from_directory(path, startdirectory, relative, prefix, checksums)
+    else:
+        yield FileInfo.from_file(path,
+                                 checksums=checksums,
+                                 relative=relative)
+
+
+def generate_fileinfos_from_directory(directory,
+                                      startdirectory=None,
+                                      relative=False,
+                                      prefix=None,
+                                      checksums=False):
 
     directory_generator = os.walk(directory)
     scatterbackup.util.advance_walk_to(directory_generator, startdirectory)
