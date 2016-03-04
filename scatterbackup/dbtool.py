@@ -36,7 +36,7 @@ def main():
 
     if args.import_file is not None:
         logging.info("loading %s", args.import_file)
-        fileinfos = scatterbackup.diff.fileinfos_from_file(args.import_file)
+        fileinfos = scatterbackup.diff.fileinfos_from_sbtr(args.import_file)
         logging.info("%s: %d entries loaded", args.import_file, len(fileinfos))
         for k, v in fileinfos.items():
             db.store(v)

@@ -17,10 +17,7 @@
 
 import argparse
 import os
-import scatterbackup
-import gzip
-import io
-import sys
+import scatterbackup.sbtr
 
 
 def same_file(fileinfo1, fileinfo2):
@@ -40,24 +37,6 @@ def same_content(fileinfo1, fileinfo2):
         return fileinfo1.blob == fileinfo2.blob
 
 
-def open_sbtr(filename):
-    if filename == "-":
-        return sys.stdin
-    elif filename.endswith(".gz"):
-        return io.TextIOWrapper(gzip.open(filename, "r"))
-    else:
-        return open(filename, "r")
-
-
-def fileinfos_from_file(filename):
-    result = {}
-    with open_sbtr(filename) as fin:
-        for line in fin:
-            fileinfo = scatterbackup.FileInfo.from_json(line)
-            result[fileinfo.path] = fileinfo
-    return result
-
-
 def filter_tree(tree, prefix):
     result = {}
     for k, v in tree.items():
@@ -73,14 +52,16 @@ def diff(tree1, tree2):
 
     for k in sorted(paths):
         if k not in tree1:
-            print("added", k)
+            if tree2[k].blob is not None:
+                print(tree2[k].blob.md5, "added", k)
         elif k not in tree2:
             print("deleted", k)
         else:
             if same_file(tree2[k], tree1[k]):
                 pass
             else:
-                print("modified", k)
+                if tree1[k].size != tree2[k].size:
+                    print(tree1[k].size - tree2[k].size, "modified", k, "size:", tree1[k].size, tree2[k].size)
 
 
 def main():
@@ -93,8 +74,8 @@ def main():
                         help="Limit comparism to files under PREFIX")
     args = parser.parse_args()
 
-    tree1 = fileinfos_from_file(args.FILE1[0])
-    tree2 = fileinfos_from_file(args.FILE2[0])
+    tree1 = scatterbackup.sbtr.fileinfos_from_sbtr(args.FILE1[0])
+    tree2 = scatterbackup.sbtr.fileinfos_from_sbtr(args.FILE2[0])
 
     if args.prefix is not None:
         prefix = os.path.normpath(args.prefix)

@@ -99,7 +99,7 @@ def main():
                         help='.sbtr file to load')
     args = parser.parse_args()
 
-    fileinfos = scatterbackup.diff.fileinfos_from_file(args.FILE[0])
+    fileinfos = scatterbackup.diff.fileinfos_from_sbtr(args.FILE[0])
     ncdu_js = ncdu_from_tree_with_header(fileinfos)
     json.dump(ncdu_js, fp=sys.stdout)
 

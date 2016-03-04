@@ -1,5 +1,5 @@
 # ScatterBackup - A chaotic backup solution
-# Copyright (C) 2015 Ingo Ruhnke <grumbel@gmail.com>
+# Copyright (C) 2016 Ingo Ruhnke <grumbel@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,20 +15,31 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import argparse
-import scatterbackup.diff
+import sys
+import io
+import gzip
+import scatterbackup
+
+"""The .sbtr file format contains FileInfo objects as newline-delimited JSON
+"""
 
 
-def main():
-    parser = argparse.ArgumentParser(description='Convert .sbtr to md5sum syntax')
-    parser.add_argument('FILE', action='store', type=str, nargs=1,
-                        help='.sbtr file to load')
-    args = parser.parse_args()
+def open_sbtr(filename):
+    if filename == "-":
+        return sys.stdin
+    elif filename.endswith(".gz"):
+        return io.TextIOWrapper(gzip.open(filename, "r"))
+    else:
+        return open(filename, "r")
 
-    fileinfos = scatterbackup.diff.fileinfos_from_sbtr(args.FILE[0])
-    for fileinfo in sorted(fileinfos.values(), key=lambda x: x.path):
-        if fileinfo.blob is not None:
-            print("{}  {}".format(fileinfo.blob.md5, fileinfo.path))
+
+def fileinfos_from_sbtr(filename):
+    result = {}
+    with open_sbtr(filename) as fin:
+        for line in fin:
+            fileinfo = scatterbackup.FileInfo.from_json(line)
+            result[fileinfo.path] = fileinfo
+    return result
 
 
 # EOF #
