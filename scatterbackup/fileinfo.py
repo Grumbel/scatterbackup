@@ -19,7 +19,6 @@ from collections import OrderedDict
 from scatterbackup.blobinfo import BlobInfo
 import json
 import os
-import socket
 import stat
 import time
 
