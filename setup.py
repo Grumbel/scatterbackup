@@ -29,6 +29,7 @@ setup(name='scatterbackup',
                               'sb-ncdu = scatterbackup.ncdu:main',
                               'sb-dbtool = scatterbackup.dbtool:main',
                               'sb-md5sum = scatterbackup.md5sum:main',
+                              'sb-dupfinder = scatterbackup.dupfinder:main',
                               'sb-sha1sum = scatterbackup.sha1sum:main'],
           'gui_scripts': []
           },
