@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import sys
 import argparse
 from scatterbackup.generator import generate_fileinfos
 from scatterbackup.units import size2bytes
@@ -72,6 +73,9 @@ def find_duplicates(filenames):
 
 
 def main():
+    # FIXME: this is a hack, see find_duplicates_fd() above
+    sys.setrecursionlimit(10000)
+
     parser = argparse.ArgumentParser(description='Find duplicate files')
     parser.add_argument('FILES', action='store', type=str, nargs='+',
                         help='files or directories to search')
