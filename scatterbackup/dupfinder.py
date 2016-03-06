@@ -17,6 +17,7 @@
 
 import argparse
 from scatterbackup.generator import generate_fileinfos
+from scatterbackup.units import size2bytes
 
 
 class DupfinderState:
@@ -80,6 +81,8 @@ def main():
                         help="be less verbose")
     parser.add_argument('-s', '--size-only', action='store_true', default=False,
                         help="Only compare file size, don't compare actual content")
+    parser.add_argument('-l', '--limit', type=size2bytes, default=0, metavar="SIZE",
+                        help="Only compare files larger then SIZE")
     args = parser.parse_args()
 
     fileinfos = []
@@ -97,7 +100,7 @@ def main():
         fileinfos_by_size[fileinfo.size].append(fileinfo)
 
     for size, fileinfos in fileinfos_by_size.items():
-        if len(fileinfos) > 1:
+        if len(fileinfos) > 1 and size >= args.limit:
             if args.verbose:
                 print("potential duplicates: {} bytes".format(size))
                 for fileinfo in fileinfos:
