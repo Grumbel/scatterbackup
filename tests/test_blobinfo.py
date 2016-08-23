@@ -28,6 +28,7 @@ class BlobInfoTestCase(unittest.TestCase):
         self.assertEqual(11, blobinfo.size)
         self.assertEqual("6df4d50a41a5d20bc4faad8a6f09aa8f", blobinfo.md5)
         self.assertEqual("bc9faaae1e35d52f3dea9651da12cd36627b8403", blobinfo.sha1)
+        self.assertEqual(460961799, blobinfo.crc32)
 
 
 if __name__ == '__main__':

@@ -95,6 +95,8 @@ class FileInfo:
                 js['blob']['sha1'] = self.blob.sha1
             if self.blob.md5 is not None:
                 js['blob']['md5'] = self.blob.md5
+            if self.blob.crc32 is not None:
+                js['blob']['crc32'] = self.blob.crc32
 
         assign('target', self.target)
 
@@ -188,7 +190,8 @@ class FileInfo:
         if blob is not None:
             result.blob = BlobInfo(blob.get('size'),
                                    md5=blob.get('md5'),
-                                   sha1=blob.get('sha1'))
+                                   sha1=blob.get('sha1'),
+                                   crc32=blob.get('crc32'))
 
         result.target = js.get('target')
 
