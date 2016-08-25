@@ -15,12 +15,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from collections import OrderedDict
-from scatterbackup.blobinfo import BlobInfo
 import json
 import os
 import stat
 import time
+
+from collections import OrderedDict
+from scatterbackup.blobinfo import BlobInfo
 
 
 class FileInfo:

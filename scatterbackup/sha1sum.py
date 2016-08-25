@@ -25,7 +25,7 @@ def main():
                         help='.sbtr file to load')
     args = parser.parse_args()
 
-    fileinfos = scatterbackup.diff.fileinfos_from_sbtr(args.FILE[0])
+    fileinfos = scatterbackup.sbtr.fileinfos_from_sbtr(args.FILE[0])
     for fileinfo in sorted(fileinfos.values(), key=lambda x: x.path):
         if fileinfo.blob is not None:
             print("{}  {}".format(fileinfo.blob.sha1, fileinfo.path))

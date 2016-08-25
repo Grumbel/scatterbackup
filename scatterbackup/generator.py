@@ -15,9 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import os
+
 from scatterbackup.fileinfo import FileInfo
 import scatterbackup.util
-import os
 
 
 def generate_fileinfos(path,

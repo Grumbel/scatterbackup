@@ -67,9 +67,9 @@ def diff(tree1, tree2):
 def main():
     parser = argparse.ArgumentParser(description='Compare two .sbtr files')
     parser.add_argument('FILE1', action='store', type=str, nargs=1,
-                        help='directory containing the mod')
+                        help='.sbtr file or directory')
     parser.add_argument('FILE2', action='store', type=str, nargs=1,
-                        help='directory containing the mod')
+                        help='.sbtr file or directory')
     parser.add_argument('-p', '--prefix', type=str, default=None, metavar="PREFIX",
                         help="Limit comparism to files under PREFIX")
     args = parser.parse_args()

@@ -7,8 +7,8 @@ from scatterbackup.fileinfo import BlobInfo
 
 def main():
     fileinfos = []
-    with zipfile.ZipFile(sys.argv[1], 'r') as zip:
-        for entry in zip.infolist():
+    with zipfile.ZipFile(sys.argv[1], 'r') as zp:
+        for entry in zp.infolist():
             # print(entry, entry.filename, entry.date_time, entry.flag_bits, entry.CRC, entry.file_size)
             info = FileInfo(entry.filename)
             info.kind = 'file'

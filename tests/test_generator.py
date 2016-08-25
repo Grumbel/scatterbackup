@@ -22,8 +22,11 @@ from scatterbackup.generator import generate_fileinfos
 class GeneratorTestCase(unittest.TestCase):
 
     def test_generator(self):
+        output = ""
         for fileinfo in generate_fileinfos("tests/"):
-            print(fileinfo.json())
+            output += fileinfo.json()
+        # FIXME: insert some proper check for validity
+        self.assertTrue(True)
 
 
 if __name__ == '__main__':

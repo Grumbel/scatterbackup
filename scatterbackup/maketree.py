@@ -16,8 +16,9 @@
 
 
 import argparse
-import scatterbackup
 import sys
+
+import scatterbackup
 from scatterbackup.generator import generate_fileinfos
 
 

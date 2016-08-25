@@ -72,10 +72,7 @@ def find_duplicates(filenames):
             fd.fd.close()
 
 
-def main():
-    # FIXME: this is a hack, see find_duplicates_fd() above
-    sys.setrecursionlimit(10000)
-
+def parse_args():
     parser = argparse.ArgumentParser(description='Find duplicate files')
     parser.add_argument('FILES', action='store', type=str, nargs='+',
                         help='files or directories to search')
@@ -87,7 +84,14 @@ def main():
                         help="Only compare file size, don't compare actual content")
     parser.add_argument('-l', '--limit', type=size2bytes, default=0, metavar="SIZE",
                         help="Only compare files larger then SIZE")
-    args = parser.parse_args()
+    return parser.parse_args()
+
+
+def main():
+    # FIXME: this is a hack, see find_duplicates_fd() above
+    sys.setrecursionlimit(10000)
+
+    args = parse_args()
 
     fileinfos = []
     for path in args.FILES:

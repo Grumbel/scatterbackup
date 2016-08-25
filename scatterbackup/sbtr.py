@@ -15,13 +15,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+"""The .sbtr file format contains FileInfo objects as newline-delimited JSON
+"""
+
+
 import sys
 import io
 import gzip
 import scatterbackup
-
-"""The .sbtr file format contains FileInfo objects as newline-delimited JSON
-"""
 
 
 def open_sbtr(filename):
