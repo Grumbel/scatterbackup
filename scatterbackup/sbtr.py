@@ -21,8 +21,11 @@
 
 import sys
 import io
+import os
 import gzip
+
 import scatterbackup
+from scatterbackup.generator import generate_fileinfos_from_directory
 
 
 def open_sbtr(filename):
@@ -35,12 +38,23 @@ def open_sbtr(filename):
 
 
 def fileinfos_from_sbtr(filename):
+    """Read FileInfo objects from .sbtr file or from compressed .sbtr.gz file"""
     result = {}
     with open_sbtr(filename) as fin:
         for line in fin:
             fileinfo = scatterbackup.FileInfo.from_json(line)
             result[fileinfo.path] = fileinfo
     return result
+
+
+def fileinfos_from_path(path):
+    """Read FileInfo objects from path, which can be a .sbtr, .sbtr.gz or directory"""
+    if os.path.isdir(path):
+        return { fileinfo.path : fileinfo for
+                 fileinfo in generate_fileinfos_from_directory(path,
+                                                               checksums=True)}
+    else:
+        return fileinfos_from_sbtr(path)
 
 
 # EOF #

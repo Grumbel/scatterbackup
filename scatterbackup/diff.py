@@ -74,8 +74,8 @@ def main():
                         help="Limit comparism to files under PREFIX")
     args = parser.parse_args()
 
-    tree1 = scatterbackup.sbtr.fileinfos_from_sbtr(args.FILE1[0])
-    tree2 = scatterbackup.sbtr.fileinfos_from_sbtr(args.FILE2[0])
+    tree1 = scatterbackup.sbtr.fileinfos_from_path(args.FILE1[0])
+    tree2 = scatterbackup.sbtr.fileinfos_from_path(args.FILE2[0])
 
     if args.prefix is not None:
         prefix = os.path.normpath(args.prefix)
