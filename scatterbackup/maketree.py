@@ -27,17 +27,22 @@ def on_report(fileinfo, fout=sys.stdout):
     fout.write("\n")
 
 
+def on_error(err):
+    sys.stderr.write("{}: cannot process path: {}: {}\n".format(
+        sys.argv[0], err.filename, err.strerror))
+
+
 def process_directory(directory, checksums, relative, prefix,
                       on_report_cb):
     if prefix is not None:
         relative = True
 
-    on_report_cb(scatterbackup.FileInfo.from_file(directory))
-
-    fileidx = 1
-    for fileinfo in generate_fileinfos(directory, relative=relative, prefix=prefix, checksums=checksums):
+    for fileinfo in generate_fileinfos(directory,
+                                       relative=relative,
+                                       prefix=prefix,
+                                       checksums=checksums,
+                                       onerror=on_error):
         on_report_cb(fileinfo)
-        fileidx += 1
 
 
 def main():
