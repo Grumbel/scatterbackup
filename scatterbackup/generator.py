@@ -31,7 +31,7 @@ def generate_files(path,
         for root, dirs, files in os.walk(path, onerror=onerror):
             for f in files + dirs:
                 try:
-                    yield os.path.join(root, f)
+                    yield os.path.normpath(os.path.join(root, f))
                 except:
                     if onerror is not None:
                         onerror(sys.exc_info()[1])
