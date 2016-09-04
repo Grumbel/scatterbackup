@@ -16,52 +16,45 @@
 
 
 import os
+import sys
 
 from scatterbackup.fileinfo import FileInfo
-import scatterbackup.util
+
+
+def generate_files(path,
+                   onerror=None):
+    """Generate a list of files and directories below path"""
+
+    yield path
+
+    if os.path.isdir(path):
+        for root, dirs, files in os.walk(path, onerror=onerror):
+            for f in files + dirs:
+                try:
+                    yield os.path.join(root, f)
+                except:
+                    if onerror is not None:
+                        onerror(sys.exc_info()[1])
 
 
 def generate_fileinfos(path,
-                       startdirectory=None,
                        relative=False,
                        prefix=None,
+                       onerror=None,
                        checksums=False):
-    if os.path.isdir(path):
-        yield from generate_fileinfos_from_directory(path, startdirectory, relative, prefix, checksums)
-    else:
-        yield FileInfo.from_file(path,
-                                 checksums=checksums,
-                                 relative=relative)
-
-
-def generate_fileinfos_from_directory(directory,
-                                      startdirectory=None,
-                                      relative=False,
-                                      prefix=None,
-                                      checksums=False):
-
-    directory_generator = os.walk(directory)
-    scatterbackup.util.advance_walk_to(directory_generator, startdirectory)
-
-    if prefix is not None:
-        relative = True
-
-    yield FileInfo.from_file(directory)
-
-    fileidx = 1
-    for root, dirs, files in directory_generator:
-        for f in files + dirs:
-            p = os.path.normpath(os.path.join(root, f))
-            fileinfo = scatterbackup.FileInfo.from_file(p,
-                                                        checksums=checksums,
-                                                        relative=relative)
-
+    for p in generate_files(path=path, onerror=onerror):
+        try:
+            fileinfo = FileInfo.from_file(p,
+                                          checksums=checksums,
+                                          relative=relative)
             if prefix is not None:
                 fileinfo.path = os.path.join(prefix, fileinfo.path)
 
             yield fileinfo
 
-            fileidx += 1
+        except:
+            if onerror is not None:
+                onerror(sys.exc_info()[1])
 
 
 # EOF #

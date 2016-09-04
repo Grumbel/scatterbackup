@@ -25,7 +25,7 @@ import os
 import gzip
 
 import scatterbackup
-from scatterbackup.generator import generate_fileinfos_from_directory
+from scatterbackup.generator import generate_fileinfos
 
 
 def open_sbtr(filename):
@@ -50,9 +50,8 @@ def fileinfos_from_sbtr(filename):
 def fileinfos_from_path(path):
     """Read FileInfo objects from path, which can be a .sbtr, .sbtr.gz or directory"""
     if os.path.isdir(path):
-        return { fileinfo.path : fileinfo for
-                 fileinfo in generate_fileinfos_from_directory(path,
-                                                               checksums=True)}
+        return {fileinfo.path: fileinfo for
+                fileinfo in generate_fileinfos(path, checksums=True)}
     else:
         return fileinfos_from_sbtr(path)
 
