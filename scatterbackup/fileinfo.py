@@ -105,6 +105,11 @@ class FileInfo:
 
         return json.dumps(js)
 
+    def calc_checksums(self):
+        statinfo = os.lstat(self.path)
+        if stat.S_ISREG(statinfo.st_mode):
+            self.blob = BlobInfo.from_file(self.path)
+
     @staticmethod
     def from_file(path, checksums=True, relative=False):
         abspath = path if relative else os.path.abspath(path)

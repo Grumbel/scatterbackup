@@ -1,5 +1,7 @@
+#!/usr/bin/env python3
+
 # ScatterBackup - A chaotic backup solution
-# Copyright (C) 2015 Ingo Ruhnke <grumbel@gmail.com>
+# Copyright (C) 2016 Ingo Ruhnke <grumbel@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,36 +16,26 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-SOURCES := $(wildcard \
-  scatterbackup/*.py \
-  tests/*.py)
 
-all: flake test # autopep
+import unittest
 
-autopep:
-	autopep8  --max-line=120  --in-place $(SOURCES)
+import scatterbackup.vfs
+from scatterbackup.fileinfo import FileInfo
 
-test:
-	python3 -m unittest discover -s tests/
 
-flake:
-	flake8 --max-line-length=120 $(SOURCES)
+class VFSTestCase(unittest.TestCase):
 
-PYLINT_TARGETS := $(addprefix .pylint/, $(SOURCES))
+    def test_foobar(self):
+        vfs = scatterbackup.vfs.VFS()
+        vfs.add(FileInfo("/foo/bar.txt"))
+        vfs.add(FileInfo("/foo/foo.zip"))
+        vfs.add(FileInfo("/foo/foo.txt"))
+        fileinfos = vfs.get_fileinfos_by_glob("/foo/*.txt")
+        self.assertEqual(2, len(fileinfos))
 
-$(PYLINT_TARGETS): .pylint/%.py: %.py
-	mkdir -p $(dir $@)
-	PYTHONPATH=. epylint3 $< --rcfile=.pylintrc --max-line-length=120
-	touch $@
 
-pylint: $(PYLINT_TARGETS)
+if __name__ == '__main__':
+    unittest.main()
 
-clean:
-	rm -vrf .pylint/
-
-install:
-	pip3 install .
-
-.PHONY: autopep test flake pylint clean
 
 # EOF #

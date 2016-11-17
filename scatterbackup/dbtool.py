@@ -22,17 +22,21 @@ import scatterbackup.diff
 import scatterbackup.database
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description='scatterbackup database tool')
+    parser.add_argument('-d', '--database', metavar='FILE', action='store', type=str, nargs=1,
+                        help='database file to use')
+    parser.add_argument('-i', '--import', action='store', type=str, dest="import_file",
+                        help='.sbtr file to import')
+    return parser.parse_args()
+
+
 def main():
     logging.basicConfig(level=logging.DEBUG)
 
-    parser = argparse.ArgumentParser(description='scatterbackup database tool')
-    parser.add_argument('DATABASE', action='store', type=str, nargs=1,
-                        help='database file to load')
-    parser.add_argument('-i', '--import', action='store', type=str, dest="import_file",
-                        help='.sbtr file to import')
-    args = parser.parse_args()
+    args = parse_args()
 
-    db = scatterbackup.database.Database(args.DATABASE[0])
+    db = scatterbackup.database.Database(args.database)
 
     if args.import_file is not None:
         logging.info("loading %s", args.import_file)

@@ -16,13 +16,20 @@
 
 
 import sqlite3
+import time
 from scatterbackup.fileinfo import FileInfo
 
 
 class Database:
 
     def __init__(self, filename):
-        self.con = sqlite3.connect(filename)
+        self.insert_count = 0  # number of inserts since last commit
+        self.insert_size = 0  # number of blob bytes processed since last commit
+        self.last_commit_time = time.time()
+        self.max_insert_count = 5000
+        self.max_insert_size = 100 * 1000 * 1000
+
+        self.con = sqlite3.connect(filename, timeout=300)
         self.init_tables()
 
     def init_tables(self):
@@ -30,7 +37,7 @@ class Database:
         cur.execute("CREATE TABLE IF NOT EXISTS fileinfo(" +
                     "id INTEGER PRIMARY KEY, " +
                     "type TEXT, " +
-                    "path TEXT, " +
+                    "path TEXT UNIQUE, " +
 
                     "dev INTEGER, " +
                     "ino INTEGER, " +
@@ -69,10 +76,12 @@ class Database:
                     "target TEXT " +
                     ")")
 
+        cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS fileinfo_index ON fileinfo (path)")
+
     def store(self, fileinfo):
-        print("store...", fileinfo.path)
+        # print("store...", fileinfo.path)
         cur = self.con.cursor()
-        cur.execute("INSERT INTO fileinfo VALUES" +
+        cur.execute("INSERT OR REPLACE INTO fileinfo VALUES" +
                     "(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (fileinfo.kind,
                      fileinfo.path,
@@ -102,6 +111,17 @@ class Database:
             cur.execute("INSERT INTO linkinfo VALUES" +
                         "(NULL, ?, ?)",
                         (fileinfo_id, fileinfo.target))
+
+        # auto-commit if certain thresholds are crossed
+        self.insert_count += 1
+
+        if fileinfo.blob is not None:
+            self.insert_size += fileinfo.blob.size
+
+        if self.insert_count >= self.max_insert_count or \
+           self.insert_size >= self.max_insert_size:
+            self.commit()
+
 
     def get_by_path(self, path):
         cur = self.con.cursor()
@@ -136,7 +156,29 @@ class Database:
             return fileinfo
 
     def commit(self):
+        t = time.time()
+        print("------------------- commit -------------------:",
+              "count:", self.insert_count,
+              "size:", self.insert_size,
+              "time: {:.2f}".format(t - self.last_commit_time),
+              "speed: {:.2f} MB/s".format((self.insert_size / 1000 / 1000)  / (t - self.last_commit_time)))
+
         self.con.commit()
+        self.last_commit_time = t
+        self.insert_count = 0
+        self.insert_size = 0
+
+
+class NullDatabase:
+
+    def __init__(self):
+        pass
+
+    def store(self, fileinfo):
+        print("store:", fileinfo.json())
+
+    def commit(self):
+        pass
 
 
 # EOF #

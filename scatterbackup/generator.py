@@ -32,9 +32,9 @@ def generate_files(path,
             for f in files + dirs:
                 try:
                     yield os.path.normpath(os.path.join(root, f))
-                except:
+                except OSError as err:
                     if onerror is not None:
-                        onerror(sys.exc_info()[1])
+                        onerror(err)
 
 
 def generate_fileinfos(path,
@@ -52,9 +52,9 @@ def generate_fileinfos(path,
 
             yield fileinfo
 
-        except:
+        except OSError as err:
             if onerror is not None:
-                onerror(sys.exc_info()[1])
+                onerror(err)
 
 
 # EOF #
