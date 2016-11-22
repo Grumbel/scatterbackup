@@ -15,9 +15,58 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import os
 import sqlite3
 import time
 from scatterbackup.fileinfo import FileInfo
+from scatterbackup.blobinfo import BlobInfo
+from collections import defaultdict
+
+def fileinfo_from_row(row):
+    fileinfo = FileInfo(row[2])
+
+    # rowid = row[0]
+    fileinfo.kind = row[1]
+    fileinfo.path = row[2]
+    fileinfo.dev = row[3]
+    fileinfo.ino = row[4]
+    fileinfo.mode = row[5]
+    fileinfo.nlink = row[6]
+    fileinfo.uid = row[7]
+    fileinfo.gid = row[8]
+    fileinfo.rdev = row[9]
+    fileinfo.size = row[10]
+    fileinfo.blksize = row[11]
+    fileinfo.blocks = row[12]
+    fileinfo.atime = row[13]
+    fileinfo.ctime = row[14]
+    fileinfo.mtime = row[15]
+    fileinfo.time = row[16]
+
+    if len(row) == 17:
+        pass
+    elif len(row) == 22:
+        if row[18] is None:
+            pass
+        elif row[18] != row[0]:
+            raise Exception("fileinfo_id doesn't match: {} != {}".format(row[0], row[18]))
+        else:
+            fileinfo.blob = BlobInfo(size=row[19],
+                                     md5=row[20],
+                                     sha1=row[21])
+    else:
+        raise Exception("unknown row length: {}: {}".format(len(row), row))
+
+    return fileinfo
+
+
+def FetchAllIter(cur):
+    while True:
+        results = cur.fetchmany()
+        if results == []:
+            break
+        for result in results:
+            yield result
 
 
 class Database:
@@ -30,14 +79,21 @@ class Database:
         self.max_insert_size = 100 * 1000 * 1000
 
         self.con = sqlite3.connect(filename, timeout=300)
+
+        # Filenames are stored as TEXT in sqlite, even so they are not
+        # necessarily valid UTF-8, using os.fsencode() is required to
+        # convert them into Python strings.
+        self.con.text_factory = os.fsdecode
+
         self.init_tables()
 
     def init_tables(self):
         cur = self.con.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS fileinfo(" +
                     "id INTEGER PRIMARY KEY, " +
+                    # "storage_id INTEGER, " +
                     "type TEXT, " +
-                    "path TEXT UNIQUE, " +
+                    "path TEXT, " +
 
                     "dev INTEGER, " +
                     "ino INTEGER, " +
@@ -76,15 +132,23 @@ class Database:
                     "target TEXT " +
                     ")")
 
-        cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS fileinfo_index ON fileinfo (path)")
+        cur.execute("CREATE TABLE IF NOT EXISTS storageinfo(" +
+                    "id INTEGER PRIMARY KEY, " +
+                    "name TEXT" +
+                    ")")
+
+        cur.execute("CREATE INDEX IF NOT EXISTS fileinfo_index ON fileinfo (path)")
+        cur.execute("CREATE INDEX IF NOT EXISTS blobinfo_fileinfo_id_index ON blobinfo (fileinfo_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS blobinfo_sha1_index ON blobinfo (sha1)")
+        cur.execute("CREATE INDEX IF NOT EXISTS blobinfo_md5_index ON blobinfo (md5)")
 
     def store(self, fileinfo):
         # print("store...", fileinfo.path)
         cur = self.con.cursor()
-        cur.execute("INSERT OR REPLACE INTO fileinfo VALUES" +
-                    "(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        cur.execute("INSERT INTO fileinfo VALUES" +
+                    "(NULL, ?, cast(? as TEXT), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (fileinfo.kind,
-                     fileinfo.path,
+                     os.fsencode(fileinfo.path),
                      fileinfo.dev,
                      fileinfo.ino,
                      fileinfo.mode,
@@ -120,40 +184,50 @@ class Database:
 
         if self.insert_count >= self.max_insert_count or \
            self.insert_size >= self.max_insert_size:
+            # if time.time() > self.last_commit_time + 5.0:
             self.commit()
-
 
     def get_by_path(self, path):
         cur = self.con.cursor()
-        cur.execute("SELECT * FROM fileinfo WHERE path = ?", (path,))
+        cur.execute("SELECT * FROM fileinfo LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id WHERE path = cast(? as TEXT)",
+                    [os.fsencode(path)])
         rows = cur.fetchall()
-        if len(rows) > 1:
-            raise Exception("duplicates in database")
-        elif len(rows) == 0:
+        if len(rows) == 0:
             return None
         else:
-            row = rows[0]
-            fileinfo = FileInfo(path)
-
-            # rowid = row[0]
-            fileinfo.kind = row[1]
-            fileinfo.path = row[2]
-            fileinfo.dev = row[3]
-            fileinfo.ino = row[4]
-            fileinfo.mode = row[5]
-            fileinfo.nlink = row[6]
-            fileinfo.uid = row[7]
-            fileinfo.gid = row[8]
-            fileinfo.rdev = row[9]
-            fileinfo.size = row[10]
-            fileinfo.blksize = row[11]
-            fileinfo.blocks = row[12]
-            fileinfo.atime = row[13]
-            fileinfo.ctime = row[14]
-            fileinfo.mtime = row[15]
-            fileinfo.time = row[16]
-
+            row = rows[-1]
+            fileinfo = fileinfo_from_row(row)
             return fileinfo
+
+    def get_all(self):
+        cur = self.con.cursor()
+        cur.execute("SELECT * FROM fileinfo LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id;")
+        rows = FetchAllIter(cur)
+        return (fileinfo_from_row(row) for row in rows)
+
+    def get_by_glob(self, pattern):
+        cur = self.con.cursor()
+        cur.execute("SELECT * FROM fileinfo LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id WHERE path glob cast(? as TEXT)",
+                    [os.fsencode(pattern)])
+        rows = FetchAllIter(cur)
+        return (fileinfo_from_row(row) for row in rows)
+
+    def get_duplicates(self, path):
+        cur = self.con.cursor()
+        cur.execute("SELECT blobinfo.sha1, fileinfo.path, blobinfo.fileinfo_id " +
+                    "FROM fileinfo " +
+                    "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id " +
+                    "WHERE " +
+                    "    fileinfo.path glob cast(? as TEXT) and " +
+                    "    fileinfo.id in (select fileinfo_id from blobinfo group by sha1 having count(*) > 1)",
+                    [os.fsencode(path) + b"*"])
+        rows = FetchAllIter(cur)
+        duplicates = defaultdict(list)
+        for row in rows:
+            sha1, path, *rest = row
+            duplicates[sha1].append((sha1, path))
+
+        return duplicates.values()
 
     def commit(self):
         t = time.time()

@@ -60,7 +60,7 @@ class FileInfo:
         else:
             return False
 
-    def json(self):
+    def to_js_dict(self):
         # use OrderedDict to create pretty and deterministic output
         js = OrderedDict()
 
@@ -103,6 +103,10 @@ class FileInfo:
 
         assign('time', self.time)
 
+        return js
+
+    def json(self):
+        js = self.to_js_dict()
         return json.dumps(js)
 
     def calc_checksums(self):

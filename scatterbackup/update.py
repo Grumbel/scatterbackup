@@ -1,5 +1,5 @@
 # ScatterBackup - A chaotic backup solution
-# Copyright (C) 2015 Ingo Ruhnke <grumbel@gmail.com>
+# Copyright (C) 2016 Ingo Ruhnke <grumbel@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,7 +18,11 @@
 import argparse
 import sys
 
+import scatterbackup.sbtr
 import scatterbackup
+import scatterbackup.util
+import scatterbackup.config
+from scatterbackup.util import sb_init
 from scatterbackup.generator import generate_fileinfos
 from scatterbackup.vfs import VFS
 from scatterbackup.database import Database, NullDatabase
@@ -42,8 +46,12 @@ def on_error(err):
         sys.argv[0], err.filename, err.strerror))
 
 
-def process_directory(db, directory, checksums, relative, prefix,
-                      on_report_cb):
+def file_changed(lhs, rhs):
+    return lhs == rhs
+
+
+def process_directory(db, directory, checksums, relative, prefix, excludes,
+                      on_report_cb, verbose=False):
 
     if prefix is not None:
         relative = True
@@ -52,28 +60,40 @@ def process_directory(db, directory, checksums, relative, prefix,
                              relative=relative,
                              prefix=prefix,
                              checksums=False,
+                             excludes=excludes,
                              onerror=on_error)
 
     for fileinfo in gen:
         # if fileinfo.kind == 'directory':
-        print("processing:", fileinfo.path)
+        if verbose:
+            print("processing:", fileinfo.path)
 
         old_fileinfo = db.get_by_path(fileinfo.path)
+
         if checksums:
             if old_fileinfo is None or \
-               old_fileinfo.mtime != fileinfo.mtime or old_fileinfo.size != fileinfo.size:
+               old_fileinfo.mtime != fileinfo.mtime or \
+               old_fileinfo.size != fileinfo.size:
                 try:
                     fileinfo.calc_checksums()
                 except OSError as err:
                     on_error(err)
+            else:
+                if old_fileinfo.blob is not None and old_fileinfo.blob.is_complete():
+                    fileinfo.blob = old_fileinfo.blob
+                else:
+                    fileinfo.calc_checksums()
 
-        # FIXME: only do if things changed
-        on_report_cb(fileinfo)
+        if old_fileinfo.blob is None or file_changed(old_fileinfo, fileinfo):
+            # FIXME: only do if things changed
+            on_report_cb(fileinfo)
+        else:
+            print("{}: already in database".format(fileinfo.path))
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Collect FileInfo')
-    parser.add_argument('DIRECTORY', action='store', type=str, nargs='+',
+    parser.add_argument('DIRECTORY', action='store', type=str, nargs='*',
                         help='directory containing the mod')
     parser.add_argument('-v', '--verbose', action='store_true', default=False,
                         help="be more verbose")
@@ -91,26 +111,43 @@ def parse_args():
                         help="Set the host name")
     parser.add_argument('-H', '--no-host', action='store_true', default=False,
                         help="Set the host name to None")
-    parser.add_argument('-d', '--database', type=str, default=None, required=True,
+    parser.add_argument('-d', '--database', type=str, default=None,
                         help="Store results in database")
+    parser.add_argument('-c', '--config', type=str, default=None,
+                        help="Load configuration file")
+    parser.add_argument('-i', '--import-file', type=str, default=None,
+                        help="Import data from .js file")
     parser.add_argument('-o', '--output', type=str, default=None,
                         help="Set the output filename")
     return parser.parse_args()
 
 
 def main():
+    sb_init()
+
     args = parse_args()
+
+    cfg = scatterbackup.config.Config()
+    cfg.load(args.config)
 
     if args.dry_run:
         db = NullDatabase()
     else:
-        db = Database(args.database)
+        db = Database(args.database or scatterbackup.util.make_default_database())
 
     on_report_cb = lambda fileinfo, db=db: on_report_with_database(db, fileinfo)
 
     try:
-        for d in args.DIRECTORY:
-            process_directory(db, d, not args.no_checksum, args.relative, args.prefix, on_report_cb)
+        if args.import_file:
+            with scatterbackup.sbtr.open_sbtr(args.import_file) as fin:
+                for line in fin:
+                    fileinfo = scatterbackup.FileInfo.from_json(line)
+                    on_report_cb(fileinfo)
+        else:
+            for d in args.DIRECTORY:
+                process_directory(db, d, not args.no_checksum, args.relative, args.prefix, cfg.excludes,
+                                  on_report_cb, verbose=args.verbose)
+        db.commit()
     except KeyboardInterrupt:
         print("KeyboardInterrupt received, shutting down")
         # FIXME: Write a continuation point here

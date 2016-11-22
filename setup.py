@@ -24,14 +24,18 @@ setup(name='scatterbackup',
       version='0.1.0',
       scripts=[],
       entry_points={
-          'console_scripts': ['sb-maketree = scatterbackup.maketree:main',
-                              'sb-diff = scatterbackup.diff:main',
-                              'sb-ncdu = scatterbackup.ncdu:main',
-                              'sb-dbtool = scatterbackup.dbtool:main',
-                              'sb-md5sum = scatterbackup.md5sum:main',
-                              'sb-dupfinder = scatterbackup.dupfinder:main',
-                              'sb-update = scatterbackup.update:main',
-                              'sb-sha1sum = scatterbackup.sha1sum:main'],
+          'console_scripts': [
+              'sb-maketree = scatterbackup.maketree:main',
+              'sb-diff = scatterbackup.diff:main',
+              'sb-ncdu = scatterbackup.ncdu:main',
+              'sb-dbtool = scatterbackup.dbtool:main',
+              'sb-md5sum = scatterbackup.md5sum:main',
+              'sb-dupfinder = scatterbackup.dupfinder:main',
+              'sb-dupfinderdb = scatterbackup.dupfinderdb:main',
+              'sb-locate = scatterbackup.locate:main',
+              'sb-update = scatterbackup.update:main',
+              'sb-sha1sum = scatterbackup.sha1sum:main'
+          ],
           'gui_scripts': []
           },
       packages=['scatterbackup'])

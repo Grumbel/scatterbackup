@@ -17,11 +17,20 @@
 
 import os
 import sys
+import fnmatch
+import logging
 
 from scatterbackup.fileinfo import FileInfo
 
+def match_excludes(path, excludes):
+    for pattern in excludes:
+        if fnmatch.fnmatch(path, pattern):
+            return True
+    return False
+
 
 def generate_files(path,
+                   excludes=[],
                    onerror=None):
     """Generate a list of files and directories below path"""
 
@@ -29,9 +38,25 @@ def generate_files(path,
 
     if os.path.isdir(path):
         for root, dirs, files in os.walk(path, onerror=onerror):
-            for f in files + dirs:
+            off = 0
+            for i, f in enumerate(dirs[:]):
                 try:
-                    yield os.path.normpath(os.path.join(root, f))
+                    path = os.path.normpath(os.path.join(root, f))
+                    if not match_excludes(path, excludes):
+                        yield path
+                    else:
+                        logging.info("excluding %s", path)
+                        del dirs[i - off]
+                        off += 1
+                except OSError as err:
+                    if onerror is not None:
+                        onerror(err)
+
+            for f in files:
+                try:
+                    path = os.path.normpath(os.path.join(root, f))
+                    if not match_excludes(path, excludes):
+                        yield path
                 except OSError as err:
                     if onerror is not None:
                         onerror(err)
@@ -41,8 +66,10 @@ def generate_fileinfos(path,
                        relative=False,
                        prefix=None,
                        onerror=None,
+                       excludes=[],
                        checksums=False):
-    for p in generate_files(path=path, onerror=onerror):
+
+    for p in generate_files(path=path, onerror=onerror, excludes=excludes):
         try:
             fileinfo = FileInfo.from_file(p,
                                           checksums=checksums,

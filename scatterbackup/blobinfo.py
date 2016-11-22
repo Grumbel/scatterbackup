@@ -28,6 +28,9 @@ class BlobInfo:
         self.crc32 = crc32
 
     def __eq__(self, other):
+        if other is None:
+            return False
+
         sha1_ok = ((self.sha1 is not None and other.sha1 is not None) and
                    self.sha1 == other.sha1)
         md5_ok = ((self.md5 is not None and other.md5 is not None) and
@@ -37,6 +40,10 @@ class BlobInfo:
 
         return (self.size == other.size and
                 (sha1_ok or md5_ok or crc32_ok))
+
+    def is_complete(self):
+        return (self.sha1 is not None and
+                self.md5 is not None)
 
     @staticmethod
     def from_file(path):
