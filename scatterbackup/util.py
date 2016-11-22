@@ -26,8 +26,8 @@ def sb_init():
     # Python 3.5.2 still doesn't have "surrogateescape" enabled by
     # default on stdout/stderr, so we have to do it manually. Test with:
     #   print(os.fsdecode(b"\xff"))
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, errors="surrogateescape")
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, errors="surrogateescape")
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, errors="surrogateescape", line_buffering=True)
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, errors="surrogateescape", line_buffering=True)
 
     logging.basicConfig(level=logging.DEBUG)
 
