@@ -214,7 +214,41 @@ class Database:
 
     def get_duplicates(self, path):
         cur = self.con.cursor()
-        cur.execute((
+
+        # doing the GLOB early speeds things up a good bit, even so it
+        # has to be done twice
+        stmt2 = (
+            "SELECT "
+            "  blobinfo.sha1, "
+            "  fileinfo.path "
+            "FROM fileinfo "
+            "INNER JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
+            "WHERE "
+            "  fileinfo.id IN ("
+            "    SELECT "
+            "      fileinfo_id "
+            "    FROM blobinfo "
+            "    INNER JOIN ( "
+            "      SELECT "
+            "        sha1 "
+            "      FROM blobinfo "
+            "      WHERE fileinfo_id IN ("
+            "        SELECT "
+            "          id "
+            "        FROM fileinfo "
+            "        WHERE "
+            "          path GLOB CAST(? AS TEXT) "
+            "        )"
+            "      GROUP BY sha1 "
+            "      HAVING COUNT(*) > 1"
+            "    ) dup ON dup.sha1 = blobinfo.sha1 "
+            "  ) AND "
+            "  path GLOB CAST(? AS TEXT)"
+            "ORDER BY blobinfo.sha1 ASC"
+        )
+
+        # slow query
+        stmt = (
             "SELECT "
             "  blobinfo.sha1, "
             "  fileinfo.path "
@@ -233,8 +267,12 @@ class Database:
             "    ) dup ON dup.sha1 = blobinfo.sha1 "
             "  ) AND "
             "path GLOB CAST(? AS TEXT) "
-            "ORDER BY blobinfo.sha1;"),
-            [os.fsencode(path) + b"/*"])
+            "ORDER BY blobinfo.sha1 ASC"
+        )
+
+        arg = os.fsencode(path) + b"/*"
+        # cur.execute(stmt, [arg])
+        cur.execute(stmt2, [arg, arg])
 
         rows = FetchAllIter(cur)
         duplicates = defaultdict(list)
@@ -242,7 +280,8 @@ class Database:
             sha1, path, *rest = row
             duplicates[sha1].append((sha1, path))
 
-        return duplicates.values()
+        values = [p[1] for p in sorted(duplicates.items(), key=lambda p: p[0])]
+        return values
 
     def commit(self):
         t = time.time()
