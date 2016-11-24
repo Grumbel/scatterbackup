@@ -214,13 +214,28 @@ class Database:
 
     def get_duplicates(self, path):
         cur = self.con.cursor()
-        cur.execute("SELECT blobinfo.sha1, fileinfo.path, blobinfo.fileinfo_id " +
-                    "FROM fileinfo " +
-                    "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id " +
-                    "WHERE " +
-                    "    fileinfo.path glob cast(? as TEXT) and " +
-                    "    fileinfo.id in (select fileinfo_id from blobinfo group by sha1 having count(*) > 1)",
-                    [os.fsencode(path) + b"*"])
+        cur.execute((
+            "SELECT "
+            "  blobinfo.sha1, "
+            "  fileinfo.path "
+            "FROM fileinfo "
+            "INNER JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
+            "WHERE "
+            "fileinfo.id IN ( "
+            "  SELECT fileinfo_id "
+            "  FROM blobinfo "
+            "  INNER JOIN ( "
+            "    SELECT "
+            "      sha1 "
+            "    FROM blobinfo "
+            "    GROUP BY sha1 "
+            "    HAVING count(*) > 1 "
+            "    ) dup ON dup.sha1 = blobinfo.sha1 "
+            "  ) AND "
+            "path GLOB CAST(? AS TEXT) "
+            "ORDER BY blobinfo.sha1;"),
+            [os.fsencode(path) + b"/*"])
+
         rows = FetchAllIter(cur)
         duplicates = defaultdict(list)
         for row in rows:
