@@ -36,14 +36,16 @@ def parse_args():
 
 
 def main():
+    scatterbackup.util.sb_init()
+
     args = parse_args()
     db = Database(args.database or scatterbackup.util.make_default_database())
     path = os.path.abspath(args.DIRECTORY[0])
     duplicates = db.get_duplicates(path)
-    for dups in duplicates:
+
+    for i, dups in enumerate(duplicates):
+        if i != 0: print()
         for dup in dups:
             print(dup[0], dup[1])
-        print()
-
 
 # EOF #
