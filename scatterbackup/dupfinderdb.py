@@ -45,7 +45,7 @@ def main():
 
     for i, dups in enumerate(duplicates):
         if i != 0: print()
-        for dup in dups:
-            print(dup[0], dup[1])
+        for fileinfo in dups:
+            print("{}  {}".format(fileinfo.blob.sha1, fileinfo.path))
 
 # EOF #

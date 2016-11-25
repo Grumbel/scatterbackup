@@ -219,8 +219,7 @@ class Database:
         # has to be done twice
         stmt2 = (
             "SELECT "
-            "  blobinfo.sha1, "
-            "  fileinfo.path "
+            "  * "
             "FROM fileinfo "
             "INNER JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
             "WHERE "
@@ -279,16 +278,16 @@ class Database:
         current_sha1 = None
         group = []
         for row in rows:
-            sha1, path, *rest = row
+            fileinfo = fileinfo_from_row(row)
 
-            if current_sha1 != sha1:
+            if current_sha1 != fileinfo.blob.sha1:
                 if group != []:
                     yield group
 
-                current_sha1 = sha1
                 group = []
+                current_sha1 = fileinfo.blob.sha1
 
-            group.append((sha1, path))
+            group.append(fileinfo)
 
         if group != []:
             yield group
