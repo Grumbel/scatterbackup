@@ -270,18 +270,28 @@ class Database:
             "ORDER BY blobinfo.sha1 ASC"
         )
 
-        arg = os.fsencode(path) + b"/*"
+        arg = os.path.join(os.fsencode(path), b"*")
         # cur.execute(stmt, [arg])
         cur.execute(stmt2, [arg, arg])
 
         rows = FetchAllIter(cur)
-        duplicates = defaultdict(list)
+
+        current_sha1 = None
+        group = []
         for row in rows:
             sha1, path, *rest = row
-            duplicates[sha1].append((sha1, path))
 
-        values = [p[1] for p in sorted(duplicates.items(), key=lambda p: p[0])]
-        return values
+            if current_sha1 != sha1:
+                if group != []:
+                    yield group
+
+                current_sha1 = sha1
+                group = []
+
+            group.append((sha1, path))
+
+        if group != []:
+            yield group
 
     def commit(self):
         t = time.time()
