@@ -56,7 +56,37 @@ class FileInfo:
 
     def __eq__(self, other):
         if type(other) is type(self):
-            return self.__dict__ == other.__dict__
+            return (
+                self.kind == other.kind and
+                self.path == other.path and
+
+                # dev does not stay permanent across reboots
+                # self.dev == other.dev and
+                self.ino == other.ino and
+
+                self.mode == other.mode and
+                self.nlink == other.nlink and
+
+                self.uid == other.uid and
+                self.gid == other.gid and
+
+                self.rdev == other.rdev and
+
+                self.size == other.size and
+                self.blksize == other.blksize and
+                self.blocks == other.blocks and
+
+                # atime creates to much bloat in db if each change is recorded
+                # self.atime == other.atime and
+
+                self.ctime == other.ctime and
+                self.mtime == other.mtime and
+
+                # creation time of the FileInfo is not relevant
+                # self.time == other.time and
+
+                self.blob == other.blob and
+                self.target == other.target)
         else:
             return False
 
