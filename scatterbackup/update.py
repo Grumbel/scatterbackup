@@ -47,7 +47,7 @@ def on_error(err):
 
 
 def file_changed(lhs, rhs):
-    return lhs == rhs
+    return lhs != rhs
 
 
 def process_directory(db, directory, checksums, relative, prefix, excludes,
@@ -70,11 +70,12 @@ def process_directory(db, directory, checksums, relative, prefix, excludes,
 
         old_fileinfo = db.get_by_path(fileinfo.path)
 
-        if checksums:
+        if fileinfo.kind == 'file' and checksums:
             if old_fileinfo is None or \
                old_fileinfo.mtime != fileinfo.mtime or \
                old_fileinfo.size != fileinfo.size:
                 try:
+                    print("{}: calculating checksums".format(fileinfo.path))
                     fileinfo.calc_checksums()
                 except OSError as err:
                     on_error(err)
@@ -82,13 +83,15 @@ def process_directory(db, directory, checksums, relative, prefix, excludes,
                 if old_fileinfo.blob is not None and old_fileinfo.blob.is_complete():
                     fileinfo.blob = old_fileinfo.blob
                 else:
+                    print("{}: calculating checksums".format(fileinfo.path))
                     fileinfo.calc_checksums()
 
-        if old_fileinfo.blob is None or file_changed(old_fileinfo, fileinfo):
+        if (fileinfo.kind == 'file' and (old_fileinfo is None or old_fileinfo.blob is None)) or file_changed(old_fileinfo, fileinfo):
             # FIXME: only do if things changed
             on_report_cb(fileinfo)
         else:
-            print("{}: already in database".format(fileinfo.path))
+            if verbose:
+                print("{}: already in database".format(fileinfo.path))
 
 
 def parse_args():
