@@ -55,7 +55,7 @@ def make_cache_directory():
     cache_dir = os.path.join(xdg.BaseDirectory.xdg_cache_home, "scatterbackup")
 
     if not os.path.exists(cache_dir):
-        os.makedirectories(cache_dir)
+        os.makedirs(cache_dir)
 
     return cache_dir
 
@@ -64,7 +64,7 @@ def make_config_directory():
     cache_dir = os.path.join(xdg.BaseDirectory.xdg_config_home, "scatterbackup")
 
     if not os.path.exists(cache_dir):
-        os.makedirectories(cache_dir)
+        os.makedirs(cache_dir)
 
     return cache_dir
 
