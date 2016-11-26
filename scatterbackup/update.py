@@ -107,10 +107,6 @@ def parse_args():
                         help="Path names are stored relative")
     parser.add_argument('-p', '--prefix', type=str, default=None,
                         help="Use a fake prefix to make a relative path absolute")
-    parser.add_argument('--host', type=str, default=None,
-                        help="Set the host name")
-    parser.add_argument('-H', '--no-host', action='store_true', default=False,
-                        help="Set the host name to None")
     parser.add_argument('-d', '--database', type=str, default=None,
                         help="Store results in database")
     parser.add_argument('-c', '--config', type=str, default=None,
