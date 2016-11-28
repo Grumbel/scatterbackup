@@ -51,6 +51,9 @@ class FileInfo:
 
         self.time = None
 
+        self.birth = None
+        self.death = None
+
         self.blob = None
         self.target = None
 

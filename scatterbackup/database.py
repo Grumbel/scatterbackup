@@ -42,18 +42,20 @@ def fileinfo_from_row(row):
     fileinfo.ctime = row[14]
     fileinfo.mtime = row[15]
     fileinfo.time = row[16]
+    fileinfo.birth = row[17]
+    fileinfo.death = row[18]
 
-    if len(row) == 17:
+    if len(row) == 19:
         pass
-    elif len(row) == 22:
-        if row[18] is None:
+    elif len(row) == 24:
+        if row[20] is None:
             pass
-        elif row[18] != row[0]:
-            raise Exception("fileinfo_id doesn't match: {} != {}".format(row[0], row[18]))
+        elif row[20] != row[0]:
+            raise Exception("fileinfo_id doesn't match: {} != {}".format(row[0], row[20]))
         else:
-            fileinfo.blob = BlobInfo(size=row[19],
-                                     md5=row[20],
-                                     sha1=row[21])
+            fileinfo.blob = BlobInfo(size=row[21],
+                                     md5=row[22],
+                                     sha1=row[23])
     else:
         raise Exception("unknown row length: {}: {}".format(len(row), row))
 
@@ -114,8 +116,11 @@ class Database:
                     "ctime INTEGER, " +
                     "mtime INTEGER, " +
 
-                    "time INTEGER" +
+                    # time when this entry was created
+                    "time INTEGER, " +
 
+                    "birth INTEGER, "
+                    "death INTEGER"
                     ")")
 
         cur.execute("CREATE TABLE IF NOT EXISTS blobinfo(" +
