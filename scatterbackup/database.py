@@ -297,6 +297,31 @@ class Database:
         if group != []:
             yield group
 
+    def fsck(self):
+        cur = self.con.cursor()
+        cur.execute(("SELECT * "
+                     "FROM ( "
+                     "  SELECT * "
+                     "  FROM fileinfo "
+                     "  WHERE death is NULL "
+                     "  ) AS birth "
+                     "GROUP BY path "
+                     "HAVING COUNT(*) > 1"))
+        rows = FetchAllIter(cur)
+        for row in rows:
+            fileinfo = fileinfo_from_row(row)
+            print("error: double-alive: {}".format(fileinfo.path))
+
+        cur = self.con.cursor()
+        cur.execute(("SELECT * "
+                     "FROM fileinfo "
+                     "WHERE birth is NULL "))
+        rows = FetchAllIter(cur)
+        for row in rows:
+            fileinfo = fileinfo_from_row(row)
+            print("error: birth must not be NULL: {}".format(fileinfo.path))
+
+
     def commit(self):
         t = time.time()
         print("------------------- commit -------------------:",

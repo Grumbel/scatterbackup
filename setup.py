@@ -35,6 +35,7 @@ setup(name='scatterbackup',
               'sb-dupfinderdb = scatterbackup.dupfinderdb:main',
               'sb-locate = scatterbackup.locate:main',
               'sb-update = scatterbackup.update:main',
+              'sb-fsck = scatterbackup.fsck:main',
               'sb-sha1sum = scatterbackup.sha1sum:main'
           ],
           'gui_scripts': []
