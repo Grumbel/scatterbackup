@@ -29,7 +29,7 @@ def path_excluded(path, excludes):
     return False
 
 
-def diff(db, oldpath, newpath, excludes):
+def diff(db, oldpath, newpath, excludes, verbose=False):
     oldglob = os.path.join(oldpath, '*')
     newglob = os.path.join(newpath, '*')
 
@@ -46,7 +46,8 @@ def diff(db, oldpath, newpath, excludes):
             print("removed {}".format(path))
         else:
             if oldfileinfo.blob == newfileinfo.blob:
-                print("ok {}".format(path))
+                if verbose:
+                    print("ok {}".format(path))
             else:
                 print("modified {}".format(path))
 
@@ -73,6 +74,8 @@ def parse_args():
                         help="Store results in database")
     parser.add_argument('-e', '--exclude', type=str, action='append', default=[],
                         help="Subpath to exclude")
+    parser.add_argument('-v', '--verbose', action='store_true', default=False,
+                        help="Be more verbose")
     return parser.parse_args()
 
 
@@ -80,7 +83,11 @@ def main():
     sb_init()
     args = parse_args()
     db = Database(args.database or scatterbackup.util.make_default_database())
-    diff(db, args.OLDPATH[0], args.NEWPATH[0], [os.path.normpath(p) + "/" for p in args.exclude])
+    diff(db,
+         os.path.abspath(args.OLDPATH[0]),
+         os.path.abspath(args.NEWPATH[0]),
+         [os.path.normpath(p) + "/" for p in args.exclude],
+         args.verbose)
 
 
 # EOF #
