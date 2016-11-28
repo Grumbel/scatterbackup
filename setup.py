@@ -27,6 +27,7 @@ setup(name='scatterbackup',
           'console_scripts': [
               'sb-maketree = scatterbackup.maketree:main',
               'sb-diff = scatterbackup.diff:main',
+              'sb-diffdb = scatterbackup.diffdb:main',
               'sb-ncdu = scatterbackup.ncdu:main',
               'sb-dbtool = scatterbackup.dbtool:main',
               'sb-md5sum = scatterbackup.md5sum:main',
