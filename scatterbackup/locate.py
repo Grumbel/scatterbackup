@@ -96,7 +96,9 @@ def main():
     if args.json:
         process_fileinfo = process_fileinfo_json
     elif args.format is not None:
-        process_fileinfo = lambda fileinfo: process_fileinfo_format(fileinfo, args.format)
+        def my_process_fileinfo(fileinfo):
+            process_fileinfo_format(fileinfo, args.format)
+        process_fileinfo = my_process_fileinfo
     else:
         process_fileinfo = process_fileinfo_regular
 

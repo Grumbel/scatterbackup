@@ -134,7 +134,9 @@ def main():
     else:
         db = Database(args.database or scatterbackup.util.make_default_database())
 
-    on_report_cb = lambda fileinfo, db=db: on_report_with_database(db, fileinfo)
+    def my_on_report_cb(fileinfo, db=db):
+        on_report_with_database(db, fileinfo)
+    on_report_cb = my_on_report_cb
 
     try:
         if args.import_file:
