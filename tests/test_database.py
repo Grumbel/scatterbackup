@@ -25,14 +25,43 @@ from scatterbackup.fileinfo import FileInfo
 
 class DatabaseTestCase(unittest.TestCase):
 
-    def test_database(self):
-        db = Database(":memory:")
-        db.init_tables()
-        db.store(FileInfo.from_file("tests/test.txt"))
-        db.store(FileInfo.from_file("tests/symlink.lnk"))
-        fileinfo = db.get_by_path(os.path.abspath("tests/test.txt"))
-        self.assertEqual(fileinfo.path, os.path.abspath("tests/test.txt"))
+    def setUp(self):
+        self.db = Database(":memory:")
+        self.db.init_tables()
+        self.db.store(FileInfo.from_file("tests/data/test.txt"))
+        self.db.store(FileInfo.from_file("tests/data/symlink.lnk"))
+        self.db.store(FileInfo.from_file("tests/data/subdir/test.txt"))
 
+    def tearDown(self):
+        del self.db
+
+    def test_get_by_path(self):
+        fileinfo = self.db.get_by_path(os.path.abspath("tests/data/test.txt"))
+        self.assertEqual(fileinfo.path, os.path.abspath("tests/data/test.txt"))
+        self.assertIsNone(self.db.get_by_path(os.path.abspath("non-existing-file.txt")))
+
+    def test_get_directory_by_path(self):
+        fileinfos = list(self.db.get_directory_by_path(os.path.abspath("tests/data/")))
+        self.assertEqual(len(fileinfos), 2)
+        self.assertEqual(fileinfos[0].path, os.path.abspath("tests/data/test.txt"))
+        self.assertEqual(fileinfos[1].path, os.path.abspath("tests/data/symlink.lnk"))
+
+    def test_get_duplicates(self):
+        results = list(self.db.get_duplicates(os.path.abspath("tests/data/")))
+        self.assertEqual(len(results), 1)
+        self.assertEqual(len(results[0]), 2)
+        self.assertEqual(results[0][0].path, os.path.abspath("tests/data/test.txt"))
+        self.assertEqual(results[0][1].path, os.path.abspath("tests/data/subdir/test.txt"))
+
+    def test_get_by_glob(self):
+        results = list(self.db.get_by_glob(os.path.abspath("tests/*.txt")))
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0].path, os.path.abspath("tests/data/test.txt"))
+        self.assertEqual(results[1].path, os.path.abspath("tests/data/subdir/test.txt"))
+
+    def test_get_all(self):
+        results = list(self.db.get_all())
+        self.assertEqual(len(results), 3)
 
 if __name__ == '__main__':
     unittest.main()
