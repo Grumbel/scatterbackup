@@ -192,7 +192,10 @@ class Database:
             # if time.time() > self.last_commit_time + 5.0:
             self.commit()
 
-    def get_by_path(self, path):
+    def get_by_path_many(self, path):
+        return get_by_path(self, path, all_matches=True)
+
+    def get_by_path(self, path, all_matches=False):
         cur = self.con.cursor()
         cur.execute("SELECT * FROM fileinfo LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id WHERE path = cast(? as TEXT)",
                     [os.fsencode(path)])
@@ -200,9 +203,12 @@ class Database:
         if len(rows) == 0:
             return None
         else:
-            row = rows[-1]
-            fileinfo = fileinfo_from_row(row)
-            return fileinfo
+            if all_matches:
+                return [fileinfo_from_row(row) for row in rows]
+            else:
+                row = rows[-1]
+                fileinfo = fileinfo_from_row(row)
+                return fileinfo
 
     def get_all(self):
         cur = self.con.cursor()
@@ -298,6 +304,7 @@ class Database:
             yield group
 
     def fsck(self):
+        # check for path that have multiple alive FileInfo associated with them
         cur = self.con.cursor()
         cur.execute(("SELECT * "
                      "FROM ( "
@@ -312,7 +319,7 @@ class Database:
             fileinfo = fileinfo_from_row(row)
             print("error: double-alive: {}".format(fileinfo.path))
 
-        cur = self.con.cursor()
+        # check for FileInfos that have never been born
         cur.execute(("SELECT * "
                      "FROM fileinfo "
                      "WHERE birth is NULL "))
@@ -321,6 +328,13 @@ class Database:
             fileinfo = fileinfo_from_row(row)
             print("error: birth must not be NULL: {}".format(fileinfo.path))
 
+        # check for abandoned BlobInfo
+        cur.execute(("SELECT count(*) "
+                     "FROM blobinfo "
+                     "WHERE fileinfo_id NOT IN (SELECT id from fileinfo)"))
+        rows = cur.fetchall()
+        if rows[0][0] > 0:
+            print("error: {} abandoned BlobInfos".format(rows[0][0]))
 
     def commit(self):
         t = time.time()

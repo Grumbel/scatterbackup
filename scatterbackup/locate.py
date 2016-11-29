@@ -50,6 +50,8 @@ def parse_args():
                         help="be more verbose")
     parser.add_argument('-d', '--database', type=str, default=None,
                         help="Store results in database")
+    parser.add_argument('-a', '--all-matches', action='store_true', default=None,
+                        help="Return all matches, including past generations")
     parser.add_argument('-i', '--ignore-case', action='store_true',
                         help="Case insensitive search")
     parser.add_argument('-j', '--json', action='store_true',
