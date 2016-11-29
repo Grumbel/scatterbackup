@@ -253,38 +253,39 @@ class Database:
 
         # doing the GLOB early speeds things up a good bit, even so it
         # has to be done twice
-        stmt2 = (
-            "SELECT "
-            "  * "
+        stmt = (
+            "WITH "
+
+            "  matching_fileinfo_ids AS ("
+            "    SELECT id "
+            "    FROM fileinfo "
+            "    WHERE path GLOB CAST(? AS TEXT) "
+            "  ), "
+
+            "  duplicate_sha1s AS ("
+            "    SELECT sha1 "
+            "    FROM blobinfo "
+            "    WHERE fileinfo_id IN matching_fileinfo_ids "
+            "    GROUP BY sha1 "
+            "    HAVING COUNT(*) > 1"
+            "  ),"
+
+            "  duplicate_fileinfo_ids AS ("
+            "    SELECT fileinfo_id "
+            "    FROM blobinfo "
+            "    INNER JOIN duplicate_sha1s ON duplicate_sha1s.sha1 = blobinfo.sha1 "
+            "  )"
+
+            "SELECT * "
             "FROM fileinfo "
             "INNER JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
-            "WHERE "
-            "  fileinfo.id IN ("
-            "    SELECT "
-            "      fileinfo_id "
-            "    FROM blobinfo "
-            "    INNER JOIN ( "
-            "      SELECT "
-            "        sha1 "
-            "      FROM blobinfo "
-            "      WHERE fileinfo_id IN ("
-            "        SELECT "
-            "          id "
-            "        FROM fileinfo "
-            "        WHERE "
-            "          path GLOB CAST(? AS TEXT) "
-            "        )"
-            "      GROUP BY sha1 "
-            "      HAVING COUNT(*) > 1"
-            "    ) dup ON dup.sha1 = blobinfo.sha1 "
-            "  ) AND "
-            "  path GLOB CAST(? AS TEXT)"
+            "WHERE fileinfo.id IN duplicate_fileinfo_ids AND "
+            "      path GLOB CAST(? AS TEXT)"
             "ORDER BY blobinfo.sha1 ASC"
         )
 
         arg = os.path.join(os.fsencode(path), b"*")
-        # cur.execute(stmt, [arg])
-        cur.execute(stmt2, [arg, arg])
+        cur.execute(stmt, [arg, arg])
 
         rows = FetchAllIter(cur)
 
