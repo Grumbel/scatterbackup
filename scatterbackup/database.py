@@ -192,6 +192,21 @@ class Database:
             # if time.time() > self.last_commit_time + 5.0:
             self.commit()
 
+    def get_directory_by_path(self, path):
+        path_glob = os.path.join(path, "*")
+        path_not_glob = os.path.join(path, "*", "*")
+
+        cur = self.con.cursor()
+        cur.execute(("SELECT * "
+                     "FROM fileinfo "
+                     "LEFT JOIN blobinfo ON fileinfo_id = fileinfo.id "
+                     "WHERE "
+                     "  path GLOB cast(? AS TEXT) AND NOT "
+                     "  path GLOB cast(? AS TEXT)"),
+                    [os.fsencode(path_glob), os.fsencode(path_not_glob)])
+        rows = FetchAllIter(cur)
+        return (fileinfo_from_row(row) for row in rows)
+
     def get_by_path_many(self, path):
         return get_by_path(self, path, all_matches=True)
 
