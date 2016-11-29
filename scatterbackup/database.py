@@ -91,56 +91,60 @@ class Database:
 
     def init_tables(self):
         cur = self.con.cursor()
-        cur.execute(("CREATE TABLE IF NOT EXISTS fileinfo("
-                     "id INTEGER PRIMARY KEY, "
-                     # "storage_id INTEGER, "
-                     "type TEXT, "
-                     "path TEXT, "
+        cur.execute((
+            "CREATE TABLE IF NOT EXISTS fileinfo("
+            "id INTEGER PRIMARY KEY, "
+            # "storage_id INTEGER, "
+            "type TEXT, "
+            "path TEXT, "
 
-                     "dev INTEGER, "
-                     "ino INTEGER, "
+            "dev INTEGER, "
+            "ino INTEGER, "
 
-                     "mode INTEGER, "
-                     "nlink INTEGER, "
+            "mode INTEGER, "
+            "nlink INTEGER, "
 
-                     "uid INTEGER, "
-                     "gid INTEGER, "
+            "uid INTEGER, "
+            "gid INTEGER, "
 
-                     "rdev INTEGER, "
+            "rdev INTEGER, "
 
-                     "size INTEGER, "
-                     "blksize INTEGER, "
-                     "blocks INTEGER, "
+            "size INTEGER, "
+            "blksize INTEGER, "
+            "blocks INTEGER, "
 
-                     "atime INTEGER, "
-                     "ctime INTEGER, "
-                     "mtime INTEGER, "
+            "atime INTEGER, "
+            "ctime INTEGER, "
+            "mtime INTEGER, "
 
-                     # time when this entry was created
-                     "time INTEGER, "
+            # time when this entry was created
+            "time INTEGER, "
 
-                     "birth INTEGER, "
-                     "death INTEGER"
-                     ")"))
+            "birth INTEGER, "
+            "death INTEGER"
+            ")"))
 
-        cur.execute(("CREATE TABLE IF NOT EXISTS blobinfo("
-                     "id INTEGER PRIMARY KEY, "
-                     "fileinfo_id INTEGER, "
-                     "size INTEGER, "
-                     "md5 TEXT, "
-                     "sha1 TEXT"
-                     ")"))
+        cur.execute((
+            "CREATE TABLE IF NOT EXISTS blobinfo("
+            "id INTEGER PRIMARY KEY, "
+            "fileinfo_id INTEGER, "
+            "size INTEGER, "
+            "md5 TEXT, "
+            "sha1 TEXT"
+            ")"))
 
-        cur.execute(("CREATE TABLE IF NOT EXISTS linkinfo("
-                     "id INTEGER PRIMARY KEY, "
-                     "fileinfo_id INTEGER, "
-                     "target TEXT "
-                     ")"))
+        cur.execute((
+            "CREATE TABLE IF NOT EXISTS linkinfo("
+            "id INTEGER PRIMARY KEY, "
+            "fileinfo_id INTEGER, "
+            "target TEXT "
+            ")"))
 
-        cur.execute(("CREATE TABLE IF NOT EXISTS storageinfo("
-                     "id INTEGER PRIMARY KEY, "
-                     "name TEXT"
-                     ")"))
+        cur.execute((
+            "CREATE TABLE IF NOT EXISTS storageinfo("
+            "id INTEGER PRIMARY KEY, "
+            "name TEXT"
+            ")"))
 
         cur.execute("CREATE INDEX IF NOT EXISTS fileinfo_index ON fileinfo (path)")
         cur.execute("CREATE INDEX IF NOT EXISTS blobinfo_fileinfo_id_index ON blobinfo (fileinfo_id)")
@@ -150,26 +154,27 @@ class Database:
     def store(self, fileinfo):
         # print("store...", fileinfo.path)
         cur = self.con.cursor()
-        cur.execute(("INSERT INTO fileinfo VALUES"
-                     "(NULL, ?, cast(? as TEXT), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"),
-                    [fileinfo.kind,
-                     os.fsencode(fileinfo.path),
-                     fileinfo.dev,
-                     fileinfo.ino,
-                     fileinfo.mode,
-                     fileinfo.nlink,
-                     fileinfo.uid,
-                     fileinfo.gid,
-                     fileinfo.rdev,
-                     fileinfo.size,
-                     fileinfo.blksize,
-                     fileinfo.blocks,
-                     fileinfo.atime,
-                     fileinfo.ctime,
-                     fileinfo.mtime,
-                     fileinfo.time,
-                     fileinfo.birth,
-                     fileinfo.death])
+        cur.execute((
+            "INSERT INTO fileinfo VALUES"
+            "(NULL, ?, cast(? as TEXT), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"),
+            [fileinfo.kind,
+             os.fsencode(fileinfo.path),
+             fileinfo.dev,
+             fileinfo.ino,
+             fileinfo.mode,
+             fileinfo.nlink,
+             fileinfo.uid,
+             fileinfo.gid,
+             fileinfo.rdev,
+             fileinfo.size,
+             fileinfo.blksize,
+             fileinfo.blocks,
+             fileinfo.atime,
+             fileinfo.ctime,
+             fileinfo.mtime,
+             fileinfo.time,
+             fileinfo.birth,
+             fileinfo.death])
 
         fileinfo_id = cur.lastrowid
 
@@ -199,13 +204,14 @@ class Database:
         path_not_glob = os.path.join(path, "*", "*")
 
         cur = self.con.cursor()
-        cur.execute(("SELECT * "
-                     "FROM fileinfo "
-                     "LEFT JOIN blobinfo ON fileinfo_id = fileinfo.id "
-                     "WHERE "
-                     "  path GLOB cast(? AS TEXT) AND NOT "
-                     "  path GLOB cast(? AS TEXT)"),
-                    [os.fsencode(path_glob), os.fsencode(path_not_glob)])
+        cur.execute((
+            "SELECT * "
+            "FROM fileinfo "
+            "LEFT JOIN blobinfo ON fileinfo_id = fileinfo.id "
+            "WHERE "
+            "  path GLOB cast(? AS TEXT) AND NOT "
+            "  path GLOB cast(? AS TEXT)"),
+            [os.fsencode(path_glob), os.fsencode(path_not_glob)])
         rows = FetchAllIter(cur)
         return (fileinfo_from_row(row) for row in rows)
 
@@ -214,12 +220,13 @@ class Database:
 
     def get_by_path(self, path, all_matches=False):
         cur = self.con.cursor()
-        cur.execute(("SELECT * "
-                     "FROM fileinfo "
-                     "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
-                     "WHERE "
-                     "   path = cast(? as TEXT)"),
-                    [os.fsencode(path)])
+        cur.execute((
+            "SELECT * "
+            "FROM fileinfo "
+            "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
+            "WHERE "
+            "   path = cast(? as TEXT)"),
+            [os.fsencode(path)])
         rows = cur.fetchall()
         if len(rows) == 0:
             return None
@@ -233,18 +240,22 @@ class Database:
 
     def get_all(self):
         cur = self.con.cursor()
-        cur.execute("SELECT * FROM fileinfo LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id;")
+        cur.execute((
+            "SELECT * "
+            "FROM fileinfo "
+            "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id"))
         rows = FetchAllIter(cur)
         return (fileinfo_from_row(row) for row in rows)
 
     def get_by_glob(self, pattern):
         cur = self.con.cursor()
-        cur.execute(("SELECT * "
-                     "FROM fileinfo "
-                     "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
-                     "WHERE "
-                     "  path glob cast(? as TEXT)"),
-                    [os.fsencode(pattern)])
+        cur.execute((
+            "SELECT * "
+            "FROM fileinfo "
+            "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
+            "WHERE "
+            "  path glob cast(? as TEXT)"),
+            [os.fsencode(pattern)])
         rows = FetchAllIter(cur)
         return (fileinfo_from_row(row) for row in rows)
 
