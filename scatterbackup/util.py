@@ -31,6 +31,7 @@ def sb_init():
 
     logging.basicConfig(level=logging.DEBUG)
 
+
 def sb_print(*args):
     for i, arg in enumerate(args):
         sys.stdout.buffer.write(os.fsencode(str(arg)))

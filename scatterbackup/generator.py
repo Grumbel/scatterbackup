@@ -16,11 +16,11 @@
 
 
 import os
-import sys
 import fnmatch
 import logging
 
 from scatterbackup.fileinfo import FileInfo
+
 
 def match_excludes(path, excludes):
     for pattern in excludes:

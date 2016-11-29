@@ -24,7 +24,6 @@ import scatterbackup.util
 import scatterbackup.config
 from scatterbackup.util import sb_init
 from scatterbackup.generator import generate_fileinfos
-from scatterbackup.vfs import VFS
 from scatterbackup.database import Database, NullDatabase
 
 # sb-update / -v -n
@@ -86,7 +85,8 @@ def process_directory(db, directory, checksums, relative, prefix, excludes,
                     print("{}: calculating checksums".format(fileinfo.path))
                     fileinfo.calc_checksums()
 
-        if (fileinfo.kind == 'file' and (old_fileinfo is None or old_fileinfo.blob is None)) or file_changed(old_fileinfo, fileinfo):
+        if (fileinfo.kind == 'file' and (old_fileinfo is None or old_fileinfo.blob is None)) \
+           or file_changed(old_fileinfo, fileinfo):
             # FIXME: only do if things changed
             on_report_cb(fileinfo)
         else:

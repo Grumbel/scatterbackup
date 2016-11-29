@@ -16,14 +16,11 @@
 
 
 import argparse
-import sys
 import os
 
 import scatterbackup
 import scatterbackup.util
-from scatterbackup.generator import generate_fileinfos
-from scatterbackup.vfs import VFS
-from scatterbackup.database import Database, NullDatabase
+from scatterbackup.database import Database
 
 
 def parse_args():
@@ -44,7 +41,8 @@ def main():
     duplicates = db.get_duplicates(path)
 
     for i, dups in enumerate(duplicates):
-        if i != 0: print()
+        if i != 0:
+            print()
         for fileinfo in dups:
             print("{}  {}".format(fileinfo.blob.sha1, fileinfo.path))
 

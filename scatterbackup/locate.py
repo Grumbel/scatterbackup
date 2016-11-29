@@ -20,9 +20,7 @@ import argparse
 import scatterbackup
 import scatterbackup.util
 from scatterbackup.util import sb_init
-from scatterbackup.generator import generate_fileinfos
-from scatterbackup.vfs import VFS
-from scatterbackup.database import Database, NullDatabase
+from scatterbackup.database import Database
 
 
 def make_case_insensitive(pattern):
@@ -34,9 +32,10 @@ def make_case_insensitive(pattern):
         elif c == ']':
             in_class = False
         else:
-            u = c.upper()
-            if u != c:
-                c = "[{}{}]".format(c, u)
+            if not in_class:
+                u = c.upper()
+                if u != c:
+                    c = "[{}{}]".format(c, u)
 
         result += c
     return result

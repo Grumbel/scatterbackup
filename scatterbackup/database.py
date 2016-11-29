@@ -20,7 +20,7 @@ import sqlite3
 import time
 from scatterbackup.fileinfo import FileInfo
 from scatterbackup.blobinfo import BlobInfo
-from collections import defaultdict
+
 
 def fileinfo_from_row(row):
     fileinfo = FileInfo(row[2])
@@ -208,11 +208,15 @@ class Database:
         return (fileinfo_from_row(row) for row in rows)
 
     def get_by_path_many(self, path):
-        return get_by_path(self, path, all_matches=True)
+        return self.get_by_path(path, all_matches=True)
 
     def get_by_path(self, path, all_matches=False):
         cur = self.con.cursor()
-        cur.execute("SELECT * FROM fileinfo LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id WHERE path = cast(? as TEXT)",
+        cur.execute(("SELECT * "
+                     "FROM fileinfo "
+                     "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
+                     "WHERE "
+                     "   path = cast(? as TEXT)"),
                     [os.fsencode(path)])
         rows = cur.fetchall()
         if len(rows) == 0:
@@ -233,7 +237,11 @@ class Database:
 
     def get_by_glob(self, pattern):
         cur = self.con.cursor()
-        cur.execute("SELECT * FROM fileinfo LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id WHERE path glob cast(? as TEXT)",
+        cur.execute(("SELECT * "
+                     "FROM fileinfo "
+                     "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
+                     "WHERE "
+                     "  path glob cast(? as TEXT)"),
                     [os.fsencode(pattern)])
         rows = FetchAllIter(cur)
         return (fileinfo_from_row(row) for row in rows)
@@ -357,7 +365,7 @@ class Database:
               "count:", self.insert_count,
               "size:", self.insert_size,
               "time: {:.2f}".format(t - self.last_commit_time),
-              "speed: {:.2f} MB/s".format((self.insert_size / 1000 / 1000)  / (t - self.last_commit_time)))
+              "speed: {:.2f} MB/s".format((self.insert_size / 1000 / 1000) / (t - self.last_commit_time)))
 
         self.con.commit()
         self.last_commit_time = t

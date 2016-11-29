@@ -17,8 +17,6 @@
 
 import yaml
 import os
-import xdg.BaseDirectory
-
 import logging
 import scatterbackup.util
 
