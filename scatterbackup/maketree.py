@@ -20,7 +20,6 @@ import sys
 
 import scatterbackup
 from scatterbackup.generator import generate_fileinfos
-from scatterbackup.vfs import VFS
 
 
 def on_report(fileinfo, fout=sys.stdout):
@@ -68,14 +67,7 @@ def main():
                         help="Store results in database")
     parser.add_argument('-o', '--output', type=str, default=None,
                         help="Set the output filename")
-    parser.add_argument('-u', '--update', type=str, default=None,
-                        help="Read info from file and update if necessary")
     args = parser.parse_args()
-
-    if args.update is not None:
-        print("loading", args.update)
-        vfs = VFS.from_sbtr(args.update)
-        print("loading done")
 
     on_report_cb = on_report
     if args.output:
