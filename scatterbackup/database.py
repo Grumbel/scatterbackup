@@ -282,29 +282,6 @@ class Database:
             "ORDER BY blobinfo.sha1 ASC"
         )
 
-        # slow query
-        stmt = (
-            "SELECT "
-            "  blobinfo.sha1, "
-            "  fileinfo.path "
-            "FROM fileinfo "
-            "INNER JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
-            "WHERE "
-            "fileinfo.id IN ( "
-            "  SELECT fileinfo_id "
-            "  FROM blobinfo "
-            "  INNER JOIN ( "
-            "    SELECT "
-            "      sha1 "
-            "    FROM blobinfo "
-            "    GROUP BY sha1 "
-            "    HAVING count(*) > 1 "
-            "    ) dup ON dup.sha1 = blobinfo.sha1 "
-            "  ) AND "
-            "path GLOB CAST(? AS TEXT) "
-            "ORDER BY blobinfo.sha1 ASC"
-        )
-
         arg = os.path.join(os.fsencode(path), b"*")
         # cur.execute(stmt, [arg])
         cur.execute(stmt2, [arg, arg])
