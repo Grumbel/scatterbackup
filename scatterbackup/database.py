@@ -91,56 +91,56 @@ class Database:
 
     def init_tables(self):
         cur = self.con.cursor()
-        cur.execute("CREATE TABLE IF NOT EXISTS fileinfo(" +
-                    "id INTEGER PRIMARY KEY, " +
-                    # "storage_id INTEGER, " +
-                    "type TEXT, " +
-                    "path TEXT, " +
+        cur.execute(("CREATE TABLE IF NOT EXISTS fileinfo("
+                     "id INTEGER PRIMARY KEY, "
+                     # "storage_id INTEGER, "
+                     "type TEXT, "
+                     "path TEXT, "
 
-                    "dev INTEGER, " +
-                    "ino INTEGER, " +
+                     "dev INTEGER, "
+                     "ino INTEGER, "
 
-                    "mode INTEGER, " +
-                    "nlink INTEGER, " +
+                     "mode INTEGER, "
+                     "nlink INTEGER, "
 
-                    "uid INTEGER, " +
-                    "gid INTEGER, " +
+                     "uid INTEGER, "
+                     "gid INTEGER, "
 
-                    "rdev INTEGER, " +
+                     "rdev INTEGER, "
 
-                    "size INTEGER, " +
-                    "blksize INTEGER, " +
-                    "blocks INTEGER, " +
+                     "size INTEGER, "
+                     "blksize INTEGER, "
+                     "blocks INTEGER, "
 
-                    "atime INTEGER, " +
-                    "ctime INTEGER, " +
-                    "mtime INTEGER, " +
+                     "atime INTEGER, "
+                     "ctime INTEGER, "
+                     "mtime INTEGER, "
 
-                    # time when this entry was created
-                    "time INTEGER, " +
+                     # time when this entry was created
+                     "time INTEGER, "
 
-                    "birth INTEGER, "
-                    "death INTEGER"
-                    ")")
+                     "birth INTEGER, "
+                     "death INTEGER"
+                     ")"))
 
-        cur.execute("CREATE TABLE IF NOT EXISTS blobinfo(" +
-                    "id INTEGER PRIMARY KEY, " +
-                    "fileinfo_id INTEGER, " +
-                    "size INTEGER, " +
-                    "md5 TEXT, " +
-                    "sha1 TEXT" +
-                    ")")
+        cur.execute(("CREATE TABLE IF NOT EXISTS blobinfo("
+                     "id INTEGER PRIMARY KEY, "
+                     "fileinfo_id INTEGER, "
+                     "size INTEGER, "
+                     "md5 TEXT, "
+                     "sha1 TEXT"
+                     ")"))
 
-        cur.execute("CREATE TABLE IF NOT EXISTS linkinfo(" +
-                    "id INTEGER PRIMARY KEY, " +
-                    "fileinfo_id INTEGER, " +
-                    "target TEXT " +
-                    ")")
+        cur.execute(("CREATE TABLE IF NOT EXISTS linkinfo("
+                     "id INTEGER PRIMARY KEY, "
+                     "fileinfo_id INTEGER, "
+                     "target TEXT "
+                     ")"))
 
-        cur.execute("CREATE TABLE IF NOT EXISTS storageinfo(" +
-                    "id INTEGER PRIMARY KEY, " +
-                    "name TEXT" +
-                    ")")
+        cur.execute(("CREATE TABLE IF NOT EXISTS storageinfo("
+                     "id INTEGER PRIMARY KEY, "
+                     "name TEXT"
+                     ")"))
 
         cur.execute("CREATE INDEX IF NOT EXISTS fileinfo_index ON fileinfo (path)")
         cur.execute("CREATE INDEX IF NOT EXISTS blobinfo_fileinfo_id_index ON blobinfo (fileinfo_id)")
@@ -150,9 +150,9 @@ class Database:
     def store(self, fileinfo):
         # print("store...", fileinfo.path)
         cur = self.con.cursor()
-        cur.execute("INSERT INTO fileinfo VALUES" +
-                    "(NULL, ?, cast(? as TEXT), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (fileinfo.kind,
+        cur.execute(("INSERT INTO fileinfo VALUES"
+                     "(NULL, ?, cast(? as TEXT), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"),
+                    [fileinfo.kind,
                      os.fsencode(fileinfo.path),
                      fileinfo.dev,
                      fileinfo.ino,
@@ -167,18 +167,20 @@ class Database:
                      fileinfo.atime,
                      fileinfo.ctime,
                      fileinfo.mtime,
-                     fileinfo.time))
+                     fileinfo.time,
+                     fileinfo.birth,
+                     fileinfo.death])
 
         fileinfo_id = cur.lastrowid
 
         if fileinfo.blob is not None:
-            cur.execute("INSERT INTO blobinfo VALUES" +
-                        "(NULL, ?, ?, ?, ?)",
+            cur.execute(("INSERT INTO blobinfo VALUES"
+                         "(NULL, ?, ?, ?, ?)"),
                         (fileinfo_id, fileinfo.blob.size, fileinfo.blob.md5, fileinfo.blob.sha1))
 
         if fileinfo.target is not None:
-            cur.execute("INSERT INTO linkinfo VALUES" +
-                        "(NULL, ?, ?)",
+            cur.execute(("INSERT INTO linkinfo VALUES"
+                         "(NULL, ?, ?)"),
                         (fileinfo_id, fileinfo.target))
 
         # auto-commit if certain thresholds are crossed
@@ -342,7 +344,7 @@ class Database:
             fileinfo = fileinfo_from_row(row)
             print("error: double-alive: {}".format(fileinfo.path))
 
-        # check for FileInfos that have never been born
+        # check for FileInfo that have never been born
         cur.execute(("SELECT * "
                      "FROM fileinfo "
                      "WHERE birth is NULL "))
@@ -351,13 +353,13 @@ class Database:
             fileinfo = fileinfo_from_row(row)
             print("error: birth must not be NULL: {}".format(fileinfo.path))
 
-        # check for abandoned BlobInfo
+        # check for orphaned BlobInfo
         cur.execute(("SELECT count(*) "
                      "FROM blobinfo "
                      "WHERE fileinfo_id NOT IN (SELECT id from fileinfo)"))
         rows = cur.fetchall()
         if rows[0][0] > 0:
-            print("error: {} abandoned BlobInfos".format(rows[0][0]))
+            print("error: {} orphaned BlobInfo".format(rows[0][0]))
 
     def commit(self):
         t = time.time()
