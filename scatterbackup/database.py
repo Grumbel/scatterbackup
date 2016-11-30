@@ -84,8 +84,10 @@ class Database:
 
         # Filenames are stored as TEXT in sqlite, even so they are not
         # necessarily valid UTF-8, using os.fsencode() is required to
-        # convert them into Python strings.
+        # convert them back into Python strings.
         self.con.text_factory = os.fsdecode
+
+        self.current_generation = None
 
         self.init_tables()
 
@@ -146,12 +148,34 @@ class Database:
             "name TEXT"
             ")"))
 
+        cur.execute((
+            "CREATE TABLE IF NOT EXISTS generation("
+            "id INTEGER PRIMARY KEY, "
+            "command TEXT, "
+            "time INTEGER"
+            ")"))
+
         cur.execute("CREATE INDEX IF NOT EXISTS fileinfo_index ON fileinfo (path)")
         cur.execute("CREATE INDEX IF NOT EXISTS blobinfo_fileinfo_id_index ON blobinfo (fileinfo_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS blobinfo_sha1_index ON blobinfo (sha1)")
         cur.execute("CREATE INDEX IF NOT EXISTS blobinfo_md5_index ON blobinfo (md5)")
 
+    def init_generation(self, cmd):
+        cur = self.con.cursor()
+        current_time = int(round(time.time() * 1000000000))
+        cur.execute((
+            "INSERT INTO generation VALUES"
+            "(NULL, ?, ?)"),
+            [cmd, current_time])
+        self.current_generation = cur.lastrowid
+
     def store(self, fileinfo):
+
+        if fileinfo.birth is not None:
+            birth = fileinfo.birth
+        else:
+            birth = self.current_generation
+
         # print("store...", fileinfo.path)
         cur = self.con.cursor()
         cur.execute((
@@ -173,7 +197,7 @@ class Database:
              fileinfo.ctime,
              fileinfo.mtime,
              fileinfo.time,
-             fileinfo.birth,
+             birth,
              fileinfo.death])
 
         fileinfo_id = cur.lastrowid

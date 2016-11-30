@@ -17,6 +17,7 @@
 
 import argparse
 import sys
+import shlex
 
 import scatterbackup.sbtr
 import scatterbackup
@@ -133,6 +134,8 @@ def main():
         db = NullDatabase()
     else:
         db = Database(args.database or scatterbackup.util.make_default_database())
+
+    db.init_generation(" ".join([shlex.quote(a) for a in sys.argv]))
 
     def my_on_report_cb(fileinfo, db=db):
         on_report_with_database(db, fileinfo)
