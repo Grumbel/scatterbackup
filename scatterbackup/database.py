@@ -234,8 +234,8 @@ class Database:
             "LEFT JOIN blobinfo ON fileinfo_id = fileinfo.id "
             "WHERE "
             "  path GLOB cast(? AS TEXT) AND NOT "
-            "  path GLOB cast(? AS TEXT)"),
-            [os.fsencode(path_glob), os.fsencode(path_not_glob)])
+            "  path GLOB cast(? AS TEXT)"
+        ), [os.fsencode(path_glob), os.fsencode(path_not_glob)])
         rows = FetchAllIter(cur)
         return (fileinfo_from_row(row) for row in rows)
 
@@ -267,7 +267,8 @@ class Database:
         cur.execute((
             "SELECT * "
             "FROM fileinfo "
-            "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id"))
+            "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id"
+        ))
         rows = FetchAllIter(cur)
         return (fileinfo_from_row(row) for row in rows)
 
@@ -278,8 +279,8 @@ class Database:
             "FROM fileinfo "
             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
             "WHERE "
-            "  path glob cast(? as TEXT)"),
-            [os.fsencode(pattern)])
+            "  path glob cast(? as TEXT)"
+        ), [os.fsencode(pattern)])
         rows = FetchAllIter(cur)
         return (fileinfo_from_row(row) for row in rows)
 
