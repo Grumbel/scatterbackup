@@ -16,6 +16,8 @@
 
 
 import argparse
+import os
+import sys
 
 import scatterbackup
 import scatterbackup.util
@@ -41,17 +43,17 @@ def make_case_insensitive(pattern):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Collect FileInfo')
-    parser.add_argument('PATTERN', action='store', type=str, nargs='*',
-                        help='Pattern to search for')
+    parser = argparse.ArgumentParser(description='Query the ScatterBackup database')
+    parser.add_argument('PATH', action='store', type=str, nargs='*', default=[],
+                        help='PATH to query')
     parser.add_argument('-v', '--verbose', action='store_true', default=False,
                         help="be more verbose")
     parser.add_argument('-d', '--database', type=str, default=None,
                         help="Store results in database")
-    parser.add_argument('-a', '--all-matches', action='store_true', default=None,
-                        help="Return all matches, including past generations")
-    parser.add_argument('-i', '--ignore-case', action='store_true',
-                        help="Case insensitive search")
+    parser.add_argument('-g', '--glob', type=str, action='append', default=[],
+                        help="Search by glob pattern")
+    parser.add_argument('-G', '--iglob', type=str, action='append', default=[],
+                        help="Search by case-insensitive glob pattern")
     parser.add_argument('-j', '--json', action='store_true',
                         help="Return results as json")
     parser.add_argument('-f', '--format', type=str,
@@ -86,35 +88,56 @@ def process_fileinfo_regular(fileinfo):
     print(fileinfo.path)
 
 
+def process_fileinfo(fileinfo, print_fun, context):
+    if fileinfo is None:
+        print("{}: error: query returned no results".format(context), file=sys.stderr)
+    else:
+        print_fun(fileinfo)
+
+
 def main():
     sb_init()
 
     args = parse_args()
     db = Database(args.database or scatterbackup.util.make_default_database())
 
+    # setup output format
     if args.json:
-        process_fileinfo = process_fileinfo_json
+        print_fun = process_fileinfo_json
     elif args.format is not None:
-        def my_process_fileinfo(fileinfo):
+        def my_print_fun(fileinfo):
             process_fileinfo_format(fileinfo, args.format)
-        process_fileinfo = my_process_fileinfo
+        print_fun = my_print_fun
     else:
-        process_fileinfo = process_fileinfo_regular
+        print_fun = process_fileinfo_regular
 
-    if args.PATTERN == []:
+    # query the database
+    if args.PATH == [] and args.glob == [] and args.iglob == []:
         fileinfos = db.get_all()
         for fileinfo in fileinfos:
-            process_fileinfo(fileinfo)
+            process_fileinfo(fileinfo, print_fun, "ALL")
     else:
-        for pattern in args.PATTERN:
-            if args.ignore_case:
-                pattern = make_case_insensitive(pattern)
+        # PATH
+        for path in args.PATH:
+            path = os.path.abspath(path)
+            fileinfo = db.get_by_path(path)
+            process_fileinfo(fileinfo, print_fun, path)
+
+        # --iglob
+        for pattern in args.glob:
+            fileinfos = db.get_by_glob(pattern)
+            for fileinfo in fileinfos:
+                process_fileinfo(fileinfo, print_fun, pattern)
+
+        # --iglob
+        for pattern in args.iglob:
+            pattern = make_case_insensitive(pattern)
 
             if args.verbose:
                 print("Pattern: {}".format(pattern))
 
             fileinfos = db.get_by_glob(pattern)
             for fileinfo in fileinfos:
-                process_fileinfo(fileinfo)
+                process_fileinfo(fileinfo, print_fun, pattern)
 
 # EOF #
