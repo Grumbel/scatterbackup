@@ -33,9 +33,8 @@ def make_case_insensitive(pattern):
             in_class = False
         else:
             if not in_class:
-                u = c.upper()
-                if u != c:
-                    c = "[{}{}]".format(c, u)
+                if c.upper() != c.lower():
+                    c = "[{}{}]".format(c.lower(), c.upper())
 
         result += c
     return result
