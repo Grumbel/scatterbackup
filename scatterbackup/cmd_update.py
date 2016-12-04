@@ -23,9 +23,10 @@ import scatterbackup.sbtr
 import scatterbackup
 import scatterbackup.util
 import scatterbackup.config
-from scatterbackup.util import sb_init
-from scatterbackup.generator import generate_fileinfos
+from scatterbackup.util import sb_init, full_join, split
+from scatterbackup.generator import scan_fileinfos
 from scatterbackup.database import Database, NullDatabase
+from scatterbackup.fileinfo import FileInfo
 
 # sb-update / -v -n
 # sb-update / -q
@@ -41,58 +42,100 @@ def on_report(fileinfo, fout=sys.stdout):
     fout.write("\n")
 
 
-def on_error(err):
-    sys.stderr.write("{}: cannot process path: {}: {}\n".format(
-        sys.argv[0], err.filename, err.strerror))
-
-
 def file_changed(lhs, rhs):
     return lhs != rhs
 
 
-def process_directory(db, directory, checksums, relative, prefix, excludes,
-                      on_report_cb, verbose=False):
+def fileinfos_split(fileinfos):
+    return split(lambda el: el.kind == "directory", fileinfos)
 
-    if prefix is not None:
-        relative = True
 
-    gen = generate_fileinfos(directory,
-                             relative=relative,
-                             prefix=prefix,
-                             checksums=False,
-                             excludes=excludes,
-                             onerror=on_error)
+def join_fileinfos(lhs, rhs):
+    return full_join(lhs, rhs, lambda fileinfo: fileinfo.path)
 
-    for fileinfo in gen:
-        # if fileinfo.kind == 'directory':
-        if verbose:
-            print("processing:", fileinfo.path)
 
-        old_fileinfo = db.get_by_path(fileinfo.path)
+class UpdateAction:
 
-        if fileinfo.kind == 'file' and checksums:
-            if old_fileinfo is None or \
-               old_fileinfo.mtime != fileinfo.mtime or \
-               old_fileinfo.size != fileinfo.size:
-                try:
-                    print("{}: calculating checksums".format(fileinfo.path))
-                    fileinfo.calc_checksums()
-                except OSError as err:
-                    on_error(err)
+    def __init__(self, db):
+        self.db = db
+        self.verbose = False
+        self.checksums = True
+        self.relative = False
+        self.prefix = None
+        self.excludes = []
+
+    def on_error(self, err):
+        # pylint: disable=locally-disabled, no-self-use
+        print("{}: cannot process path: {}: {}"
+              .format(sys.argv[0], err.filename, err.strerror),
+              file=sys.stderr)
+
+    def add_checksums(self, fi, ref):
+        if fi.kind != 'file':
+            return  # no checksum needed
+
+        if ref is not None and \
+           ref.blob is not None and \
+           ref.blob.is_complete() and \
+           ref.mtime == fi.mtime and \
+           ref.size == fi.size:
+            # recycle checksum from reference FileInfo
+            fi.blob = ref.blob
+        elif self.checksums:
+            print("{}: calculating checksums".format(fi.path))
+            try:
+                print("{}: calculating checksums".format(fi.path))
+                fi.calc_checksums()
+            except OSError as err:
+                self.on_error(err)
+
+    def process_dirs(self, fs_dirs, db_dirs):
+        for fs_fi, db_fi in join_fileinfos(fs_dirs, db_dirs):
+            if fs_fi is None:
+                self.db.mark_removed_recursive(db_fi.path)
+            elif db_fi is None:
+                self.db.store(fs_fi)
             else:
-                if old_fileinfo.blob is not None and old_fileinfo.blob.is_complete():
-                    fileinfo.blob = old_fileinfo.blob
+                if file_changed(fs_fi, db_fi):
+                    self.db.mark_removed(db_fi)
+                    self.db.store(fs_fi)
                 else:
-                    print("{}: calculating checksums".format(fileinfo.path))
-                    fileinfo.calc_checksums()
+                    pass  # already in db, nothing to do
 
-        if (fileinfo.kind == 'file' and (old_fileinfo is None or old_fileinfo.blob is None)) \
-           or file_changed(old_fileinfo, fileinfo):
-            # FIXME: only do if things changed
-            on_report_cb(fileinfo)
-        else:
-            if verbose:
-                print("{}: already in database".format(fileinfo.path))
+    def process_files(self, fs_files, db_files):
+        for fs_fi, db_fi in join_fileinfos(fs_files, db_files):
+            if fs_fi is None:
+                self.db.mark_removed(db_fi.path)
+            elif db_fi is None:
+                self.add_checksums(fs_fi, None)
+                self.db.store(fs_fi)
+            else:
+                if file_changed(fs_fi, db_fi):
+                    self.add_checksums(fs_fi, db_fi)
+                    self.db.mark_removed(db_fi)
+                    self.db.store(fs_fi)
+                else:
+                    pass  # already in db, nothing to do
+
+    def process_directory(self, directory):
+        # root directory
+        fi_db = self.db.get_by_path(directory)
+        self.process_dirs([FileInfo.from_file(directory)],
+                          [fi_db] if fi_db is not None else [])
+
+        # content of root directory
+        fs_gen = scan_fileinfos(directory,
+                                relative=self.relative,
+                                # prefix=prefix,  # FIXME: prefix not implemented
+                                checksums=False,
+                                excludes=self.excludes,
+                                onerror=self.on_error)
+
+        for root, fs_dirs, fs_files in fs_gen:
+            db_dirs, db_files = fileinfos_split(self.db.get_directory_by_path(root))
+
+            self.process_dirs(fs_dirs, db_dirs)
+            self.process_files(fs_files, db_files)
 
 
 def parse_args():
@@ -137,21 +180,26 @@ def main():
 
     db.init_generation(" ".join([shlex.quote(a) for a in sys.argv]))
 
-    def my_on_report_cb(fileinfo, db=db):
-        on_report_with_database(db, fileinfo)
-    on_report_cb = my_on_report_cb
-
     try:
         if args.import_file:
             with scatterbackup.sbtr.open_sbtr(args.import_file) as fin:
                 for line in fin:
                     fileinfo = scatterbackup.FileInfo.from_json(line)
-                    on_report_cb(fileinfo)
+                    db.store(fileinfo)
         else:
-            for d in args.DIRECTORY:
-                process_directory(db, d, not args.no_checksum, args.relative, args.prefix, cfg.excludes,
-                                  on_report_cb, verbose=args.verbose)
+            for directory in args.DIRECTORY:
+                update = UpdateAction(db)
+
+                update.verbose = args.verbose
+                update.checksums = not args.no_checksum
+                update.relative = args.relative if args.prefix is None else True
+                update.prefix = args.prefix
+                update.excludes = cfg.excludes
+
+                update.process_directory(directory)
+
         db.commit()
+
     except KeyboardInterrupt:
         print("KeyboardInterrupt received, shutting down")
         # FIXME: Write a continuation point here

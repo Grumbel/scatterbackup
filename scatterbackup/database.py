@@ -222,6 +222,12 @@ class Database:
             # if time.time() > self.last_commit_time + 5.0:
             self.commit()
 
+    def mark_removed_recursive(self, path):
+        print("mark_removed_recursive: implement me", path)
+
+    def mark_removed(self, path):
+        print("mark_removed: implement me", path)
+
     def get_directory_by_path(self, path):
         path_glob = os.path.join(path, "*")
         path_not_glob = os.path.join(path, "*", "*")

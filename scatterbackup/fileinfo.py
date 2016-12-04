@@ -240,4 +240,8 @@ class FileInfo:
 
         return result
 
+    def __repr__(self):
+        return "FileInfo({!r})".format(self.path)
+
+
 # EOF #
