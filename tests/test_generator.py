@@ -33,6 +33,7 @@ class GeneratorTestCase(unittest.TestCase):
             print(root)
 
     def test_scan_fileinfos(self):
+        # pylint: disable=locally-disabled, no-self-use
         for root, dirs, files in scan_fileinfos("tests/data/"):
             for d in dirs:
                 print(d.json())

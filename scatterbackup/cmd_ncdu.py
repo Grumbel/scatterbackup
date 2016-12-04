@@ -21,7 +21,7 @@ import os
 import sys
 import time
 
-import scatterbackup.diff
+import scatterbackup.sbtr
 
 
 # st_dev is included when it changes

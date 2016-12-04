@@ -18,7 +18,6 @@
 import logging
 import argparse
 
-import scatterbackup.diff
 import scatterbackup.database
 
 

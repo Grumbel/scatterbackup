@@ -163,10 +163,9 @@ class Database:
     def init_generation(self, cmd):
         cur = self.con.cursor()
         current_time = int(round(time.time() * 1000000000))
-        cur.execute((
-            "INSERT INTO generation VALUES"
-            "(NULL, ?, ?)"),
-            [cmd, current_time])
+        cur.execute(("INSERT INTO generation VALUES"
+                     "(NULL, ?, ?)"),
+                    [cmd, current_time])
         self.current_generation = cur.lastrowid
 
     def store(self, fileinfo):
@@ -178,9 +177,9 @@ class Database:
 
         # print("store...", fileinfo.path)
         cur = self.con.cursor()
-        cur.execute((
-            "INSERT INTO fileinfo VALUES"
-            "(NULL, ?, cast(? as TEXT), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"),
+        cur.execute(
+            ("INSERT INTO fileinfo VALUES"
+             "(NULL, ?, cast(? as TEXT), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"),
             [fileinfo.kind,
              os.fsencode(fileinfo.path),
              fileinfo.dev,
@@ -228,14 +227,14 @@ class Database:
         path_not_glob = os.path.join(path, "*", "*")
 
         cur = self.con.cursor()
-        cur.execute((
-            "SELECT * "
-            "FROM fileinfo "
-            "LEFT JOIN blobinfo ON fileinfo_id = fileinfo.id "
-            "WHERE "
-            "  path GLOB cast(? AS TEXT) AND NOT "
-            "  path GLOB cast(? AS TEXT)"
-        ), [os.fsencode(path_glob), os.fsencode(path_not_glob)])
+        cur.execute(
+            ("SELECT * "
+             "FROM fileinfo "
+             "LEFT JOIN blobinfo ON fileinfo_id = fileinfo.id "
+             "WHERE "
+             "  path GLOB cast(? AS TEXT) AND NOT "
+             "  path GLOB cast(? AS TEXT)"),
+            [os.fsencode(path_glob), os.fsencode(path_not_glob)])
         rows = FetchAllIter(cur)
         return (fileinfo_from_row(row) for row in rows)
 
@@ -244,12 +243,12 @@ class Database:
 
     def get_by_path(self, path, all_matches=False):
         cur = self.con.cursor()
-        cur.execute((
-            "SELECT * "
-            "FROM fileinfo "
-            "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
-            "WHERE "
-            "   path = cast(? as TEXT)"),
+        cur.execute(
+            ("SELECT * "
+             "FROM fileinfo "
+             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
+             "WHERE "
+             "   path = cast(? as TEXT)"),
             [os.fsencode(path)])
         rows = cur.fetchall()
         if len(rows) == 0:
@@ -264,23 +263,22 @@ class Database:
 
     def get_all(self):
         cur = self.con.cursor()
-        cur.execute((
-            "SELECT * "
-            "FROM fileinfo "
-            "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id"
-        ))
+        cur.execute(
+            ("SELECT * "
+             "FROM fileinfo "
+             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id"))
         rows = FetchAllIter(cur)
         return (fileinfo_from_row(row) for row in rows)
 
     def get_by_glob(self, pattern):
         cur = self.con.cursor()
-        cur.execute((
-            "SELECT * "
-            "FROM fileinfo "
-            "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
-            "WHERE "
-            "  path glob cast(? as TEXT)"
-        ), [os.fsencode(pattern)])
+        cur.execute(
+            ("SELECT * "
+             "FROM fileinfo "
+             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
+             "WHERE "
+             "  path glob cast(? as TEXT)"),
+            [os.fsencode(pattern)])
         rows = FetchAllIter(cur)
         return (fileinfo_from_row(row) for row in rows)
 
@@ -345,32 +343,35 @@ class Database:
     def fsck(self):
         # check for path that have multiple alive FileInfo associated with them
         cur = self.con.cursor()
-        cur.execute(("SELECT * "
-                     "FROM ( "
-                     "  SELECT * "
-                     "  FROM fileinfo "
-                     "  WHERE death is NULL "
-                     "  ) AS birth "
-                     "GROUP BY path "
-                     "HAVING COUNT(*) > 1"))
+        cur.execute(
+            ("SELECT * "
+             "FROM ( "
+             "  SELECT * "
+             "  FROM fileinfo "
+             "  WHERE death is NULL "
+             "  ) AS birth "
+             "GROUP BY path "
+             "HAVING COUNT(*) > 1"))
         rows = FetchAllIter(cur)
         for row in rows:
             fileinfo = fileinfo_from_row(row)
             print("error: double-alive: {}".format(fileinfo.path))
 
         # check for FileInfo that have never been born
-        cur.execute(("SELECT * "
-                     "FROM fileinfo "
-                     "WHERE birth is NULL "))
+        cur.execute(
+            ("SELECT * "
+             "FROM fileinfo "
+             "WHERE birth is NULL "))
         rows = FetchAllIter(cur)
         for row in rows:
             fileinfo = fileinfo_from_row(row)
             print("error: birth must not be NULL: {}".format(fileinfo.path))
 
         # check for orphaned BlobInfo
-        cur.execute(("SELECT count(*) "
-                     "FROM blobinfo "
-                     "WHERE fileinfo_id NOT IN (SELECT id from fileinfo)"))
+        cur.execute(
+            ("SELECT count(*) "
+             "FROM blobinfo "
+             "WHERE fileinfo_id NOT IN (SELECT id from fileinfo)"))
         rows = cur.fetchall()
         if rows[0][0] > 0:
             print("error: {} orphaned BlobInfo".format(rows[0][0]))
@@ -395,6 +396,7 @@ class NullDatabase:
         pass
 
     def store(self, fileinfo):
+        # pylint: disable=locally-disabled, no-self-use
         print("store:", fileinfo.json())
 
     def commit(self):

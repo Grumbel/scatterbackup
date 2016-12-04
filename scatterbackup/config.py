@@ -15,9 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import yaml
 import os
 import logging
+import yaml
+
 import scatterbackup.util
 
 

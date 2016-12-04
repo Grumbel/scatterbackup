@@ -22,18 +22,22 @@ import logging
 from scatterbackup.fileinfo import FileInfo
 
 
-def match_excludes(path, excludes):
-    for pattern in excludes:
-        if fnmatch.fnmatch(path, pattern):
-            return True
+def match_excludes(path, excludes=None):
+    if excludes is not None:
+        for pattern in excludes:
+            if fnmatch.fnmatch(path, pattern):
+                return True
     return False
 
 
 def scan_directory(path,
-                   excludes=[],
+                   excludes=None,
                    onerror=None):
     """Wrapper around os.walk() that applies a list of exclude directives
     and returns result as absolute path"""
+
+    if excludes is None:
+        excludes = []
 
     path = os.path.abspath(path)
 
@@ -68,7 +72,7 @@ def scan_directory(path,
 
 
 def scan_fileinfos(path,
-                   excludes=[],
+                   excludes=None,
                    checksums=False,
                    relative=False,
                    onerror=None):
@@ -86,7 +90,7 @@ def scan_fileinfos(path,
 
 
 def generate_files(path,
-                   excludes=[],
+                   excludes=None,
                    onerror=None):
     """Generate a list of files and directories below path"""
 
@@ -122,7 +126,7 @@ def generate_fileinfos(path,
                        relative=False,
                        prefix=None,
                        onerror=None,
-                       excludes=[],
+                       excludes=None,
                        checksums=False):
 
     for p in generate_files(path=path, onerror=onerror, excludes=excludes):
