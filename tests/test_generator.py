@@ -16,7 +16,7 @@
 
 
 import unittest
-from scatterbackup.generator import generate_fileinfos
+from scatterbackup.generator import generate_fileinfos, scan_directory, scan_fileinfos
 
 
 class GeneratorTestCase(unittest.TestCase):
@@ -27,6 +27,17 @@ class GeneratorTestCase(unittest.TestCase):
             output += fileinfo.json()
         # FIXME: insert some proper check for validity
         self.assertTrue(True)
+
+    def test_scan_directory(self):
+        for root, dirs, files in scan_directory("tests/data/"):
+            print(root)
+
+    def test_scan_fileinfos(self):
+        for root, dirs, files in scan_fileinfos("tests/data/"):
+            for d in dirs:
+                print(d.json())
+            for f in files:
+                print(f.json())
 
 
 if __name__ == '__main__':

@@ -29,6 +29,62 @@ def match_excludes(path, excludes):
     return False
 
 
+def scan_directory(path,
+                   excludes=[],
+                   onerror=None):
+    """Wrapper around os.walk() that applies a list of exclude directives
+    and returns result as absolute path"""
+
+    path = os.path.abspath(path)
+
+    for root, dirs, files in os.walk(path, onerror=onerror):
+        result_dirs = []
+        result_files = []
+
+        off = 0
+        for i, f in enumerate(dirs[:]):
+            try:
+                path = os.path.join(root, f)
+                if not match_excludes(path, excludes):
+                    result_dirs.append(path)
+                else:
+                    logging.info("excluding %s", path)
+                    del dirs[i - off]
+                    off += 1
+            except OSError as err:
+                if onerror is not None:
+                    onerror(err)
+
+        for f in files:
+            try:
+                path = os.path.join(root, f)
+                if not match_excludes(path, excludes):
+                    result_files.append(path)
+            except OSError as err:
+                if onerror is not None:
+                    onerror(err)
+
+        yield [root, result_dirs, result_files]
+
+
+def scan_fileinfos(path,
+                   excludes=[],
+                   checksums=False,
+                   relative=False,
+                   onerror=None):
+
+    for root, dirs, files in scan_directory(path, excludes, onerror):
+        result_dirs = []
+        for d in dirs:
+            result_dirs.append(FileInfo.from_file(d, checksums=checksums, relative=relative))
+
+        result_files = []
+        for f in files:
+            result_files.append(FileInfo.from_file(f, checksums=checksums, relative=relative))
+
+        yield [root, result_dirs, result_files]
+
+
 def generate_files(path,
                    excludes=[],
                    onerror=None):
