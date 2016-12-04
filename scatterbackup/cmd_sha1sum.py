@@ -16,7 +16,8 @@
 
 
 import argparse
-import scatterbackup.diff
+
+import scatterbackup.sbtr
 
 
 def main():
