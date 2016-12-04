@@ -32,14 +32,6 @@ def sb_init():
     logging.basicConfig(level=logging.DEBUG)
 
 
-def sb_print(*args):
-    for i, arg in enumerate(args):
-        sys.stdout.buffer.write(os.fsencode(str(arg)))
-        if i < len(args) - 1:
-            sys.stdout.buffer.write(b' ')
-    sys.stdout.buffer.write(b'\n')
-
-
 def advance_walk_to(walk, directory):
     """Advance the given os.walk() generator to the given directory."""
     # FIXME: implement this
