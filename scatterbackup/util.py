@@ -62,4 +62,50 @@ def make_config_directory():
     return cache_dir
 
 
+def split(pred, lst):
+    """Like filter(), but return two list, first one with the elements
+    where pred() is True, second where it is False"""
+
+    lhs = []
+    rhs = []
+
+    for el in lst:
+        if pred(el):
+            lhs.append(el)
+        else:
+            rhs.append(el)
+
+    return (lhs, rhs)
+
+
+def full_join(lhs, rhs, key=lambda x: x):
+    """Do a full outer join of two lists on key"""
+
+    lhs = sorted(lhs, key=key)
+    rhs = sorted(rhs, key=key)
+
+    l = 0
+    r = 0
+
+    while l < len(lhs) and r < len(rhs):
+        if key(lhs[l]) == key(rhs[r]):
+            yield (lhs[l], rhs[r])
+            l += 1
+            r += 1
+        elif key(lhs[l]) < key(rhs[r]):
+            yield (lhs[l], None)
+            l += 1
+        elif key(lhs[l]) > key(rhs[r]):
+            yield (None, rhs[r])
+            r += 1
+        else:
+            assert False, "Never reached"
+
+    for i in range(l, len(lhs)):
+        yield (lhs[i], None)
+
+    for i in range(r, len(rhs)):
+        yield (None, rhs[i])
+
+
 # EOF #

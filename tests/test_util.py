@@ -19,10 +19,29 @@
 
 import unittest
 
+from scatterbackup.util import full_join, split
+
 
 class UtilTestCase(unittest.TestCase):
 
-    pass
+    def test_split(self):
+        lst = [2, 1, 4, 3, 5]
+        result = split(lambda x: x < 4, lst)
+        self.assertEqual(result[0], [2, 1, 3])
+        self.assertEqual(result[1], [4, 5])
+
+    def test_full_join(self):
+        lhs = [2, 1, 4, 3, 5]
+        rhs = [7, 5, 4, 6, 3]
+        result = list(full_join(lhs, rhs))
+        expected = [(1, None),
+                    (2, None),
+                    (3, 3),
+                    (4, 4),
+                    (5, 5),
+                    (None, 6),
+                    (None, 7)]
+        self.assertEqual(result, expected)
 
 
 if __name__ == '__main__':
