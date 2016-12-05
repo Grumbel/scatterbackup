@@ -64,11 +64,15 @@ class UpdateAction:
         self.prefix = None
         self.excludes = []
 
-    def on_error(self, err):
+    def error(self, err):
         # pylint: disable=locally-disabled, no-self-use
         print("{}: cannot process path: {}: {}"
               .format(sys.argv[0], err.filename, err.strerror),
               file=sys.stderr)
+
+    def message(self, msg):
+        if self.verbose:
+            print(msg)
 
     def add_checksums(self, fi, ref):
         if fi.kind != 'file':
@@ -82,40 +86,54 @@ class UpdateAction:
             # recycle checksum from reference FileInfo
             fi.blob = ref.blob
         elif self.checksums:
-            print("{}: calculating checksums".format(fi.path))
+            self.message("{}: calculating checksums".format(fi.path))
             try:
-                print("{}: calculating checksums".format(fi.path))
                 fi.calc_checksums()
             except OSError as err:
-                self.on_error(err)
+                self.error(err)
 
     def process_dirs(self, fs_dirs, db_dirs):
         for fs_fi, db_fi in join_fileinfos(fs_dirs, db_dirs):
             if fs_fi is None:
-                self.db.mark_removed_recursive(db_fi.path)
+                self.message("{}: mark as removed recursive".format(db_fi.path))
+                self.db.mark_removed_recursive(db_fi)
             elif db_fi is None:
+                self.message("{}: storing in db".format(fs_fi.path))
                 self.db.store(fs_fi)
             else:
                 if file_changed(fs_fi, db_fi):
+                    print("OLD:", fs_fi.json())
+                    print("NEW:", db_fi.json())
+                    self.message("{}: directory changed".format(fs_fi.path))
                     self.db.mark_removed(db_fi)
                     self.db.store(fs_fi)
                 else:
-                    pass  # already in db, nothing to do
+                    self.message("{}: directory already in db, nothing to do".format(fs_fi.path))
 
     def process_files(self, fs_files, db_files):
-        for fs_fi, db_fi in join_fileinfos(fs_files, db_files):
+        joined = join_fileinfos(fs_files, db_files)
+        # for f, d in joined:
+        #    print("   fs: {!r:40} db: {!r:40}".format(f, d))
+        for fs_fi, db_fi in joined:
             if fs_fi is None:
-                self.db.mark_removed(db_fi.path)
+                self.message("{}: mark as removed".format(db_fi.path))
+                self.db.mark_removed(db_fi)
             elif db_fi is None:
+                self.message("{}: calculating checksum and storing in db".format(fs_fi.path))
                 self.add_checksums(fs_fi, None)
                 self.db.store(fs_fi)
             else:
+                # recycle checksum from database
+                self.add_checksums(fs_fi, db_fi)
+
                 if file_changed(fs_fi, db_fi):
-                    self.add_checksums(fs_fi, db_fi)
+                    # print("OLD:", fs_fi.json())
+                    # print("NEW:", db_fi.json())
+                    self.message("{}: file changed".format(fs_fi.path))
                     self.db.mark_removed(db_fi)
                     self.db.store(fs_fi)
                 else:
-                    pass  # already in db, nothing to do
+                    self.message("{}: file already in db, nothing to do".format(fs_fi.path))
 
     def process_directory(self, directory):
         # root directory
@@ -129,7 +147,7 @@ class UpdateAction:
                                 # prefix=prefix,  # FIXME: prefix not implemented
                                 checksums=False,
                                 excludes=self.excludes,
-                                onerror=self.on_error)
+                                onerror=self.error)
 
         for root, fs_dirs, fs_files in fs_gen:
             db_dirs, db_files = fileinfos_split(self.db.get_directory_by_path(root))

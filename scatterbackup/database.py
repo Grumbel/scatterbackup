@@ -25,7 +25,7 @@ from scatterbackup.blobinfo import BlobInfo
 def fileinfo_from_row(row):
     fileinfo = FileInfo(row[2])
 
-    # rowid = row[0]
+    fileinfo.rowid = row[0]
     fileinfo.kind = row[1]
     fileinfo.path = row[2]
     fileinfo.dev = row[3]
@@ -46,16 +46,30 @@ def fileinfo_from_row(row):
     fileinfo.death = row[18]
 
     if len(row) == 19:
-        pass
+        pass  # no BlobInfo requested
     elif len(row) == 24:
         if row[20] is None:
-            pass
+            pass  # no BlobInfo available
         elif row[20] != row[0]:
             raise Exception("fileinfo_id doesn't match: {} != {}".format(row[0], row[20]))
         else:
             fileinfo.blob = BlobInfo(size=row[21],
                                      md5=row[22],
                                      sha1=row[23])
+    elif len(row) == 27:
+        if row[20] is None:
+            pass  # no BlobInfo available
+        elif row[20] != row[0]:
+            raise Exception("fileinfo_id doesn't match: {} != {}".format(row[0], row[20]))
+        else:
+            fileinfo.blob = BlobInfo(size=row[21],
+                                     md5=row[22],
+                                     sha1=row[23])
+
+        if row[24] is not None:
+            if row[25] != row[0]:
+                raise Exception("fileinfo_id doesn't match: {} != {}".format(row[0], row[25]))
+            fileinfo.target = row[26]
     else:
         raise Exception("unknown row length: {}: {}".format(len(row), row))
 
@@ -222,11 +236,39 @@ class Database:
             # if time.time() > self.last_commit_time + 5.0:
             self.commit()
 
-    def mark_removed_recursive(self, path):
-        print("mark_removed_recursive: implement me", path)
+    def mark_removed_recursive(self, fileinfo):
+        if fileinfo.rowid is None:
+            print("mark_removed_recursive: no rowid given", fileinfo.path)
+        elif fileinfo.kind != "directory":
+            print("mark_removed_recursive: must be a directory", fileinfo.path)
+        else:
+            cur = self.con.cursor()
 
-    def mark_removed(self, path):
-        print("mark_removed: implement me", path)
+            # root
+            cur.execute(
+                ("UPDATE fileinfo "
+                 "SET death = ? "
+                 "WHERE fileinfo.id = ?"),
+                [self.current_generation, fileinfo.rowid])
+
+            # children
+            cur.execute(
+                ("UPDATE fileinfo "
+                 "SET death = ? "
+                 "WHERE fileinfo.path GLOB ?"),
+                [self.current_generation,
+                 os.fsencode(os.path.join(fileinfo.path, "*"))])
+
+    def mark_removed(self, fileinfo):
+        if fileinfo.rowid is None:
+            print("mark_removed: no rowid given", fileinfo.path)
+        else:
+            cur = self.con.cursor()
+            cur.execute(
+                ("UPDATE fileinfo "
+                 "SET death = ? "
+                 "WHERE fileinfo.id = ?"),
+                [self.current_generation, fileinfo.rowid])
 
     def get_directory_by_path(self, path):
         path_glob = os.path.join(path, "*")
@@ -236,8 +278,10 @@ class Database:
         cur.execute(
             ("SELECT * "
              "FROM fileinfo "
-             "LEFT JOIN blobinfo ON fileinfo_id = fileinfo.id "
+             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
+             "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
              "WHERE "
+             "  fileinfo.death is NULL AND "
              "  path GLOB cast(? AS TEXT) AND NOT "
              "  path GLOB cast(? AS TEXT)"),
             [os.fsencode(path_glob), os.fsencode(path_not_glob)])
@@ -253,8 +297,10 @@ class Database:
             ("SELECT * "
              "FROM fileinfo "
              "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
+             "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
              "WHERE "
-             "   path = cast(? as TEXT)"),
+             "  fileinfo.death is NULL AND "
+             "  path = cast(? as TEXT)"),
             [os.fsencode(path)])
         rows = cur.fetchall()
         if len(rows) == 0:
@@ -272,7 +318,8 @@ class Database:
         cur.execute(
             ("SELECT * "
              "FROM fileinfo "
-             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id"))
+             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
+             "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "))
         rows = FetchAllIter(cur)
         return (fileinfo_from_row(row) for row in rows)
 
@@ -282,7 +329,9 @@ class Database:
             ("SELECT * "
              "FROM fileinfo "
              "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
+             "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
              "WHERE "
+             "  fileinfo.death is NULL AND "
              "  path glob cast(? as TEXT)"),
             [os.fsencode(pattern)])
         rows = FetchAllIter(cur)
@@ -318,9 +367,12 @@ class Database:
 
             "SELECT * "
             "FROM fileinfo "
-            "INNER JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
-            "WHERE fileinfo.id IN duplicate_fileinfo_ids AND "
-            "      path GLOB CAST(? AS TEXT)"
+            "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
+            "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
+            "WHERE "
+            "  fileinfo.death is NULL AND "
+            "  fileinfo.id IN duplicate_fileinfo_ids AND "
+            "  path GLOB CAST(? AS TEXT)"
             "ORDER BY blobinfo.sha1 ASC"
         )
 

@@ -27,6 +27,8 @@ from scatterbackup.blobinfo import BlobInfo
 class FileInfo:
 
     def __init__(self, path):
+        self.rowid = None
+
         self.kind = None
         self.path = path
 
