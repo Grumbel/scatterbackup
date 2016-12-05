@@ -18,6 +18,7 @@
 import argparse
 import sys
 import shlex
+import os
 
 import scatterbackup.sbtr
 import scatterbackup
@@ -93,7 +94,10 @@ class UpdateAction:
                 self.error(err)
 
     def process_dirs(self, fs_dirs, db_dirs):
-        for fs_fi, db_fi in join_fileinfos(fs_dirs, db_dirs):
+        joined = join_fileinfos(fs_dirs, db_dirs)
+        # for f, d in joined:
+        #     print("   fs: {!r:40} db: {!r:40}".format(f, d))
+        for fs_fi, db_fi in joined:
             if fs_fi is None:
                 self.message("{}: mark as removed recursive".format(db_fi.path))
                 self.db.mark_removed_recursive(db_fi)
@@ -205,7 +209,7 @@ def main():
                     fileinfo = scatterbackup.FileInfo.from_json(line)
                     db.store(fileinfo)
         else:
-            for directory in args.DIRECTORY:
+            for directory in (os.path.abspath(d) for d in args.DIRECTORY):
                 update = UpdateAction(db)
 
                 update.verbose = args.verbose
