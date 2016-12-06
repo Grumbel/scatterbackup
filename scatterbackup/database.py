@@ -16,6 +16,7 @@
 
 
 import os
+import sys
 import sqlite3
 import time
 from scatterbackup.fileinfo import FileInfo
@@ -44,32 +45,33 @@ def fileinfo_from_row(row):
     fileinfo.time = row[16]
     fileinfo.birth = row[17]
     fileinfo.death = row[18]
+    fileinfo.directory_id = row[19]
 
-    if len(row) == 19:
+    if len(row) == 20:
         pass  # no BlobInfo requested
-    elif len(row) == 24:
-        if row[20] is None:
+    elif len(row) == 25:
+        if row[21] is None:
             pass  # no BlobInfo available
-        elif row[20] != row[0]:
-            raise Exception("fileinfo_id doesn't match: {} != {}".format(row[0], row[20]))
+        elif row[21] != row[0]:
+            raise Exception("fileinfo_id doesn't match: {} != {}".format(row[0], row[21]))
         else:
-            fileinfo.blob = BlobInfo(size=row[21],
-                                     md5=row[22],
-                                     sha1=row[23])
-    elif len(row) == 27:
-        if row[20] is None:
+            fileinfo.blob = BlobInfo(size=row[22],
+                                     md5=row[23],
+                                     sha1=row[24])
+    elif len(row) == 28:
+        if row[21] is None:
             pass  # no BlobInfo available
-        elif row[20] != row[0]:
-            raise Exception("fileinfo_id doesn't match: {} != {}".format(row[0], row[20]))
+        elif row[21] != row[0]:
+            raise Exception("fileinfo_id doesn't match: {} != {}".format(row[0], row[21]))
         else:
-            fileinfo.blob = BlobInfo(size=row[21],
-                                     md5=row[22],
-                                     sha1=row[23])
+            fileinfo.blob = BlobInfo(size=row[22],
+                                     md5=row[23],
+                                     sha1=row[24])
 
-        if row[24] is not None:
-            if row[25] != row[0]:
-                raise Exception("fileinfo_id doesn't match: {} != {}".format(row[0], row[25]))
-            fileinfo.target = row[26]
+        if row[25] is not None:
+            if row[26] != row[0]:
+                raise Exception("fileinfo_id doesn't match: {} != {}".format(row[0], row[26]))
+            fileinfo.target = row[27]
     else:
         raise Exception("unknown row length: {}: {}".format(len(row), row))
 
@@ -137,7 +139,9 @@ class Database:
             "time INTEGER, "
 
             "birth INTEGER, "
-            "death INTEGER"
+            "death INTEGER, "
+
+            "directory_id INTEGER"
             ")"))
 
         cur.execute((
@@ -147,6 +151,12 @@ class Database:
             "size INTEGER, "
             "md5 TEXT, "
             "sha1 TEXT"
+            ")"))
+
+        cur.execute((
+            "CREATE TABLE IF NOT EXISTS directory("
+            "id INTEGER PRIMARY KEY, "
+            "path TEXT UNIQUE"
             ")"))
 
         cur.execute((
@@ -169,7 +179,35 @@ class Database:
             "time INTEGER"
             ")"))
 
+        print("STARTING CONVERT")
+        def py_dirname(p):
+            try:
+                if p is None:
+                    return None
+                else:
+                    return os.path.dirname(p)
+            except:
+                print("ERROR", sys.exc_info())
+                return None
+
+        self.con.create_function("py_dirname", 1, py_dirname)
+
+        if False:
+            print("creating directory table")
+            cur.execute(
+                "INSERT OR IGNORE INTO directory "
+                "SELECT NULL, py_dirname(path) FROM fileinfo")
+
+            print("updating directory_id in fileinfo")
+            cur.execute(
+                "UPDATE fileinfo "
+                "SET directory_id = (SELECT id FROM directory WHERE directory.path = py_dirname(fileinfo.path))")
+        print("CONVERT DONE")
+
         cur.execute("CREATE INDEX IF NOT EXISTS fileinfo_index ON fileinfo (path)")
+        cur.execute("CREATE INDEX IF NOT EXISTS fileinfo_directory_id_index ON fileinfo (directory_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS fileinfo2_index ON fileinfo (death, path)")
+        cur.execute("CREATE INDEX IF NOT EXISTS directory_path_index ON fileinfo (path)")
         cur.execute("CREATE INDEX IF NOT EXISTS blobinfo_fileinfo_id_index ON blobinfo (fileinfo_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS blobinfo_sha1_index ON blobinfo (sha1)")
         cur.execute("CREATE INDEX IF NOT EXISTS blobinfo_md5_index ON blobinfo (md5)")
@@ -183,17 +221,28 @@ class Database:
         self.current_generation = cur.lastrowid
 
     def store(self, fileinfo):
+        cur = self.con.cursor()
 
         if fileinfo.birth is not None:
             birth = fileinfo.birth
         else:
             birth = self.current_generation
 
+        if fileinfo.directory_id is None:
+            dname = os.path.dirname(fileinfo.path)
+            cur.execute(
+                "INSERT OR IGNORE INTO directory "
+                "VALUES (NULL, cast(? AS TEXT))",
+                [os.fsencode(dname)])
+            cur.execute(
+                "SELECT id FROM directory WHERE path = cast(? AS TEXT)",
+                [os.fsencode(dname)])
+            fileinfo.directory_id = cur.fetchall()[0][0]
+
         # print("store...", fileinfo.path)
-        cur = self.con.cursor()
         cur.execute(
             ("INSERT INTO fileinfo VALUES"
-             "(NULL, ?, cast(? as TEXT), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"),
+             "(NULL, ?, cast(? as TEXT), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"),
             [fileinfo.kind,
              os.fsencode(fileinfo.path),
              fileinfo.dev,
@@ -211,7 +260,8 @@ class Database:
              fileinfo.mtime,
              fileinfo.time,
              birth,
-             fileinfo.death])
+             fileinfo.death,
+             fileinfo.directory_id])
 
         fileinfo_id = cur.lastrowid
 
@@ -255,7 +305,7 @@ class Database:
             cur.execute(
                 ("UPDATE fileinfo "
                  "SET death = ? "
-                 "WHERE fileinfo.path GLOB ?"),
+                 "WHERE fileinfo.path GLOB cast(? AS TEXT)"),
                 [self.current_generation,
                  os.fsencode(os.path.join(fileinfo.path, "*"))])
 
@@ -270,7 +320,7 @@ class Database:
                  "WHERE fileinfo.id = ?"),
                 [self.current_generation, fileinfo.rowid])
 
-    def get_directory_by_path(self, path):
+    def get_directory_by_path2(self, path):
         path_glob = os.path.join(path, "*")
         path_not_glob = os.path.join(path, "*", "*")
 
@@ -281,10 +331,40 @@ class Database:
              "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
              "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
              "WHERE "
-             "  fileinfo.death is NULL AND "
-             "  path GLOB cast(? AS TEXT) AND NOT "
-             "  path GLOB cast(? AS TEXT)"),
+             "  path GLOB cast(? AS TEXT) AND "
+             "  path NOT GLOB cast(? AS TEXT) AND"
+             "  fileinfo.death is NULL "
+            ),
             [os.fsencode(path_glob), os.fsencode(path_not_glob)])
+        rows = FetchAllIter(cur)
+        return (fileinfo_from_row(row) for row in rows)
+
+    def get_directory_by_path(self, path):
+        cur = self.con.cursor()
+        cur.execute(
+            ("SELECT id "
+             "FROM directory "
+             "WHERE "
+             "  path = cast(? AS TEXT)"),
+            [os.fsencode(path)])
+        rows = cur.fetchall()
+
+        if len(rows) != 1:
+            print("XXX ERRROR XXX")
+            return ()
+
+        rowid, = rows[0]
+        print("path: {} rowid: {}".format(path, rowid))
+
+        cur.execute(
+            ("SELECT * "
+             "FROM fileinfo "
+             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
+             "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
+             "WHERE "
+             "  fileinfo.death is NULL AND "
+             "  fileinfo.directory_id = ?"),
+            [rowid])
         rows = FetchAllIter(cur)
         return (fileinfo_from_row(row) for row in rows)
 

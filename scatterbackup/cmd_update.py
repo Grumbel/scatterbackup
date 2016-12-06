@@ -19,6 +19,7 @@ import argparse
 import sys
 import shlex
 import os
+import timeit
 
 import scatterbackup.sbtr
 import scatterbackup
@@ -44,7 +45,13 @@ def on_report(fileinfo, fout=sys.stdout):
 
 
 def file_changed(lhs, rhs):
-    return lhs != rhs
+    if lhs != rhs:
+        for k, v in lhs.__dict__.items():
+            if rhs.__dict__[k] != v:
+                print("field changed: {}".format(k))
+        return True
+    else:
+        return False
 
 
 def fileinfos_split(fileinfos):
@@ -85,6 +92,7 @@ class UpdateAction:
            ref.mtime == fi.mtime and \
            ref.size == fi.size:
             # recycle checksum from reference FileInfo
+            self.message("{}: recycling checksums".format(fi.path))
             fi.blob = ref.blob
         elif self.checksums:
             self.message("{}: calculating checksums".format(fi.path))
@@ -131,8 +139,8 @@ class UpdateAction:
                 self.add_checksums(fs_fi, db_fi)
 
                 if file_changed(fs_fi, db_fi):
-                    # print("OLD:", fs_fi.json())
-                    # print("NEW:", db_fi.json())
+                    print("OLD:", fs_fi.json())
+                    print("NEW:", db_fi.json())
                     self.message("{}: file changed".format(fs_fi.path))
                     self.db.mark_removed(db_fi)
                     self.db.store(fs_fi)
@@ -154,11 +162,13 @@ class UpdateAction:
                                 onerror=self.error)
 
         for root, fs_dirs, fs_files in fs_gen:
-            db_dirs, db_files = fileinfos_split(self.db.get_directory_by_path(root))
+            start_time = timeit.default_timer()
+            result = self.db.get_directory_by_path(root)
+            print("{} seconds elapsed for {}".format(timeit.default_timer() - start_time, root))
+            db_dirs, db_files = fileinfos_split(result)
 
             self.process_dirs(fs_dirs, db_dirs)
             self.process_files(fs_files, db_files)
-
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Collect FileInfo')

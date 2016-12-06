@@ -59,6 +59,8 @@ class FileInfo:
         self.blob = None
         self.target = None
 
+        self.directory_id = None
+
     def __eq__(self, other):
         if type(other) is type(self):
             return (
