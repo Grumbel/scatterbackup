@@ -50,14 +50,16 @@ class DatabaseTestCase(unittest.TestCase):
         results = list(self.db.get_duplicates(os.path.abspath("tests/data/")))
         self.assertEqual(len(results), 1)
         self.assertEqual(len(results[0]), 2)
-        self.assertEqual(results[0][0].path, os.path.abspath("tests/data/test.txt"))
-        self.assertEqual(results[0][1].path, os.path.abspath("tests/data/subdir/test.txt"))
+        results[0].sort(key=lambda fi: fi.path)
+        self.assertEqual(results[0][0].path, os.path.abspath("tests/data/subdir/test.txt"))
+        self.assertEqual(results[0][1].path, os.path.abspath("tests/data/test.txt"))
 
     def test_get_by_glob(self):
         results = list(self.db.get_by_glob(os.path.abspath("tests/*.txt")))
         self.assertEqual(len(results), 2)
-        self.assertEqual(results[0].path, os.path.abspath("tests/data/test.txt"))
-        self.assertEqual(results[1].path, os.path.abspath("tests/data/subdir/test.txt"))
+        results.sort(key=lambda fi: fi.path)
+        self.assertEqual(results[0].path, os.path.abspath("tests/data/subdir/test.txt"))
+        self.assertEqual(results[1].path, os.path.abspath("tests/data/test.txt"))
 
     def test_get_all(self):
         results = list(self.db.get_all())
