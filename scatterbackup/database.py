@@ -527,6 +527,21 @@ class Database:
         self.insert_count = 0
         self.insert_size = 0
 
+    def print_info(self):
+        cur = self.con.cursor()
+
+        cur.execute(
+            ("SELECT COUNT(*) "
+             "FROM fileinfo "
+             "WHERE death is NULL"))
+        print("{} files in database".format(cur.fetchall()[0][0]))
+
+        cur.execute(
+            ("SELECT COUNT(*) "
+             "FROM fileinfo "
+             "WHERE death IS NOT NULL"))
+        print("{} dead files in database".format(cur.fetchall()[0][0]))
+
 
 class NullDatabase:
 
