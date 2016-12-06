@@ -16,6 +16,8 @@
 
 
 import unittest
+import os
+
 from scatterbackup.generator import generate_fileinfos, scan_directory, scan_fileinfos
 
 
@@ -29,16 +31,23 @@ class GeneratorTestCase(unittest.TestCase):
         self.assertTrue(True)
 
     def test_scan_directory(self):
-        for root, dirs, files in scan_directory("tests/data/"):
-            print(root)
+        results = list(scan_directory("tests/data/"))
+        expected = [[os.path.abspath('tests/data'),
+                     [os.path.abspath('tests/data/subdir')],
+                     [os.path.abspath('tests/data/test.txt'),
+                      os.path.abspath('tests/data/symlink.lnk')]],
+                    [os.path.abspath('tests/data/subdir'),
+                     [],
+                     [os.path.abspath('tests/data/subdir/test.txt')]]]
+        self.assertEqual(results, expected)
 
     def test_scan_fileinfos(self):
         # pylint: disable=locally-disabled, no-self-use
         for root, dirs, files in scan_fileinfos("tests/data/"):
             for d in dirs:
-                print(d.json())
+                pass  # print(d.json())
             for f in files:
-                print(f.json())
+                pass  # print(f.json())
 
 
 if __name__ == '__main__':
