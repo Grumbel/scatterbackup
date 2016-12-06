@@ -179,7 +179,6 @@ class Database:
             "time INTEGER"
             ")"))
 
-        print("STARTING CONVERT")
         def py_dirname(p):
             try:
                 if p is None:
@@ -193,6 +192,7 @@ class Database:
         self.con.create_function("py_dirname", 1, py_dirname)
 
         if False:
+            print("STARTING CONVERT")
             print("creating directory table")
             cur.execute(
                 "INSERT OR IGNORE INTO directory "
@@ -202,7 +202,7 @@ class Database:
             cur.execute(
                 "UPDATE fileinfo "
                 "SET directory_id = (SELECT id FROM directory WHERE directory.path = py_dirname(fileinfo.path))")
-        print("CONVERT DONE")
+            print("CONVERT DONE")
 
         cur.execute("CREATE INDEX IF NOT EXISTS fileinfo_index ON fileinfo (path)")
         cur.execute("CREATE INDEX IF NOT EXISTS fileinfo_directory_id_index ON fileinfo (directory_id)")
@@ -333,8 +333,7 @@ class Database:
              "WHERE "
              "  path GLOB cast(? AS TEXT) AND "
              "  path NOT GLOB cast(? AS TEXT) AND"
-             "  fileinfo.death is NULL "
-            ),
+             "  fileinfo.death is NULL "),
             [os.fsencode(path_glob), os.fsencode(path_not_glob)])
         rows = FetchAllIter(cur)
         return (fileinfo_from_row(row) for row in rows)
@@ -350,23 +349,22 @@ class Database:
         rows = cur.fetchall()
 
         if len(rows) != 1:
-            print("XXX ERRROR XXX")
-            return ()
+            return []
+        else:
+            rowid, = rows[0]
 
-        rowid, = rows[0]
-        print("path: {} rowid: {}".format(path, rowid))
+            cur.execute(
+                ("SELECT * "
+                 "FROM fileinfo "
+                 "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
+                 "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
+                 "WHERE "
+                 "  fileinfo.death is NULL AND "
+                 "  fileinfo.directory_id = ?"),
+                [rowid])
+            rows = FetchAllIter(cur)
 
-        cur.execute(
-            ("SELECT * "
-             "FROM fileinfo "
-             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
-             "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
-             "WHERE "
-             "  fileinfo.death is NULL AND "
-             "  fileinfo.directory_id = ?"),
-            [rowid])
-        rows = FetchAllIter(cur)
-        return (fileinfo_from_row(row) for row in rows)
+            return (fileinfo_from_row(row) for row in rows)
 
     def get_by_path_many(self, path):
         return self.get_by_path(path, all_matches=True)
