@@ -32,12 +32,6 @@ def sb_init():
     logging.basicConfig(level=logging.DEBUG)
 
 
-def advance_walk_to(walk, directory):
-    """Advance the given os.walk() generator to the given directory."""
-    # FIXME: implement this
-    return walk
-
-
 def make_default_database():
     cache_dir = make_cache_directory()
     db_file = os.path.join(cache_dir, "database1.sqlite3")
