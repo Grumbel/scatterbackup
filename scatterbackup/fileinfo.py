@@ -32,7 +32,7 @@ class FileInfo:
         self.kind = None
         self.path = path
 
-        self.dev = None
+        self.dev = None  # FIXME: this is not stable across reboots
         self.ino = None
 
         self.mode = None

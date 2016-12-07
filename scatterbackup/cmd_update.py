@@ -47,7 +47,7 @@ def file_changed(lhs, rhs):
     if lhs != rhs:
         # for k, v in lhs.__dict__.items():
         #     if rhs.__dict__[k] != v:
-        #         print("field changed: {}".format(k))
+        #        print("field changed: {}".format(k))
         return True
     else:
         return False
@@ -72,12 +72,13 @@ class UpdateAction:
         self.excludes = []
 
     def error(self, err):
-        # pylint: disable=locally-disabled, no-self-use
+        # pylint: disable=no-self-use
         print("{}: cannot process path: {}: {}"
               .format(sys.argv[0], err.filename, err.strerror),
               file=sys.stderr)
 
     def message(self, msg):
+        # pylint: disable=no-self-use
         print(msg)
 
     def info(self, msg):
@@ -127,7 +128,7 @@ class UpdateAction:
     def process_files(self, fs_files, db_files):
         joined = join_fileinfos(fs_files, db_files)
         # for f, d in joined:
-        #    print("   fs: {!r:40} db: {!r:40}".format(f, d))
+        #   print("   fs: {!r:40} db: {!r:40}".format(f, d))
         for fs_fi, db_fi in joined:
             if fs_fi is None:
                 self.message("{}: file removed".format(db_fi.path))

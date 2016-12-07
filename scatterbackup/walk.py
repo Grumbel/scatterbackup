@@ -8,6 +8,7 @@ from os import fspath, scandir, path
 # it returns symlinks to directories in the 'nodirs' portion of the
 # result tuple instead of the 'dirs' one.
 def walk(top, topdown=True, onerror=None, followlinks=False):
+    # pylint: disable=too-many-locals,too-many-branches
     """Directory tree generator.
 
     For each directory in the directory tree rooted at top (including top
