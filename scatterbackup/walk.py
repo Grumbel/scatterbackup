@@ -1,7 +1,12 @@
 # See https://docs.python.org/3/license.html for license information
 
-# This is the os.walk() function from Python-3.6.0.
 
+from os import fspath, scandir, path
+
+
+# This is the os.walk() function from Python-3.6.0, modified such that
+# it returns symlinks to directories in the 'nodirs' portion of the
+# result tuple instead of the 'dirs' one.
 def walk(top, topdown=True, onerror=None, followlinks=False):
     """Directory tree generator.
 
@@ -98,7 +103,15 @@ def walk(top, topdown=True, onerror=None, followlinks=False):
                 # a directory, same behaviour than os.path.isdir().
                 is_dir = False
 
-            if is_dir:
+            try:
+                is_symlink = entry.is_symlink()
+            except OSError:
+                # If is_symlink() raises an OSError, consider that the
+                # entry is not a symbolic link, same behaviour than
+                # os.path.islink().
+                is_symlink = False
+
+            if is_dir and not is_symlink:
                 dirs.append(entry.name)
             else:
                 nondirs.append(entry.name)
@@ -109,13 +122,6 @@ def walk(top, topdown=True, onerror=None, followlinks=False):
                 if followlinks:
                     walk_into = True
                 else:
-                    try:
-                        is_symlink = entry.is_symlink()
-                    except OSError:
-                        # If is_symlink() raises an OSError, consider that the
-                        # entry is not a symbolic link, same behaviour than
-                        # os.path.islink().
-                        is_symlink = False
                     walk_into = not is_symlink
 
                 if walk_into:

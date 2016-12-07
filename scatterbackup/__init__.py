@@ -18,12 +18,14 @@
 from .fileinfo import FileInfo
 from .blobinfo import BlobInfo
 from .database import Database
+from .walk import walk
 
 
 __all__ = [
     'FileInfo',
     'BlobInfo',
-    'Database'
+    'Database',
+    'walk'
 ]
 
 

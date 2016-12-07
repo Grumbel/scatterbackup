@@ -19,6 +19,7 @@ import os
 import fnmatch
 import logging
 
+import scatterbackup
 from scatterbackup.fileinfo import FileInfo
 
 
@@ -33,15 +34,15 @@ def match_excludes(path, excludes=None):
 def scan_directory(path,
                    excludes=None,
                    onerror=None):
-    """Wrapper around os.walk() that applies a list of exclude directives
-    and returns result as absolute path"""
-
+    """Wrapper around scatterbackup.walk() that applies a list of exclude
+    directives and returns result as absolute path
+    """
     if excludes is None:
         excludes = []
 
     path = os.path.abspath(path)
 
-    for root, dirs, files in os.walk(path, onerror=onerror):
+    for root, dirs, files in scatterbackup.walk(path, onerror=onerror):
         result_dirs = []
         result_files = []
 
@@ -97,7 +98,7 @@ def generate_files(path,
     yield path
 
     if os.path.isdir(path):
-        for root, dirs, files in os.walk(path, onerror=onerror):
+        for root, dirs, files in scatterbackup.walk(path, onerror=onerror):
             off = 0
             for i, f in enumerate(dirs[:]):
                 try:

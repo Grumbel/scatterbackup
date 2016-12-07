@@ -24,7 +24,7 @@ autopep:
 	autopep8  --max-line=120  --in-place $(SOURCES)
 
 test:
-	python3 -m unittest discover -s tests/
+	python3.6 -m unittest discover -s tests/
 
 flake:
 	flake8 --max-line-length=120 $(SOURCES)
