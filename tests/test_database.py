@@ -65,6 +65,11 @@ class DatabaseTestCase(unittest.TestCase):
         results = list(self.db.get_all())
         self.assertEqual(len(results), 3)
 
+    def test_get_generation(self):
+        gens = self.db.get_generation()
+        self.assertEqual(len(gens), 0)
+
+
 if __name__ == '__main__':
     unittest.main()
 

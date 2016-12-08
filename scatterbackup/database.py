@@ -23,6 +23,13 @@ from scatterbackup.fileinfo import FileInfo
 from scatterbackup.blobinfo import BlobInfo
 
 
+def generation_from_row(row):
+    if len(row) != 3:
+        raise Exception("generation_from_row: to many columns: {}".format(row))
+    else:
+        return Generation(row[0], row[1], row[2])
+
+
 def fileinfo_from_row(row):
     fileinfo = FileInfo(row[2])
 
@@ -214,7 +221,7 @@ class Database:
 
     def init_generation(self, cmd):
         cur = self.con.cursor()
-        current_time = int(round(time.time() * 1000000000))
+        current_time = int(round(time.time() * 1000**3))
         cur.execute(("INSERT INTO generation VALUES"
                      "(NULL, ?, ?)"),
                     [cmd, current_time])
@@ -370,6 +377,11 @@ class Database:
         return self.get_by_path(path, all_matches=True)
 
     def get_by_path(self, path, all_matches=False):
+        if all_matches:
+            gen_limit_stmt = ""
+        else:
+            gen_limit_stmt = "  fileinfo.death is NULL AND "
+
         cur = self.con.cursor()
         cur.execute(
             ("SELECT * "
@@ -377,8 +389,9 @@ class Database:
              "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
              "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
              "WHERE "
-             "  fileinfo.death is NULL AND "
-             "  path = cast(? as TEXT)"),
+             +  gen_limit_stmt +
+             "  path = cast(? as TEXT)"
+             "ORDER BY birth ASC"),
             [os.fsencode(path)])
         rows = cur.fetchall()
         if len(rows) == 0:
@@ -475,6 +488,16 @@ class Database:
 
         if group != []:
             yield group
+
+    def get_generations(self, start, end):
+        cur = self.con.cursor()
+        cur.execute(
+            ("SELECT * "
+             "FROM generation "
+             "WHERE start <= ? AND ? < end"),
+            [start, end])
+        rows = FetchAllIter(cur)
+        return [generation_from_row(row) for row in rows]
 
     def fsck(self):
         # check for path that have multiple alive FileInfo associated with them
