@@ -38,6 +38,7 @@ setup(name='scatterbackup',
               'sb-fsck = scatterbackup.cmd_fsck:main',
               'sb-info = scatterbackup.cmd_info:main',
               'sb-log = scatterbackup.cmd_log:main',
+              'sb-du = scatterbackup.cmd_du:main',
               'sb-sha1sum = scatterbackup.cmd_sha1sum:main'
           ],
           'gui_scripts': []

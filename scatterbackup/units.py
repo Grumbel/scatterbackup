@@ -58,4 +58,19 @@ def size2bytes(text: str) -> int:
         raise Exception("couldn't interpret {!r}".format(text))
 
 
+def bytes2human(count):
+    """Returns size formated as a human readable string"""
+
+    if count < 1000:
+        return "{}B".format(count)
+    elif count < 1000 ** 2:
+        return "{:.2f}kB".format(count / 1000**1)
+    elif count < 1000 ** 3:
+        return "{:.2f}MB".format(count / 1000**2)
+    elif count < 1000 ** 4:
+        return "{:.2f}GB".format(count / 1000**3)
+    else:
+        return "{:.2f}TB".format(count / 1000**4)
+
+
 # EOF #
