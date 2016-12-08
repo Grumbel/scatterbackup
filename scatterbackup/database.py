@@ -19,6 +19,8 @@ import os
 import sys
 import sqlite3
 import time
+
+from scatterbackup.generation import Generation
 from scatterbackup.fileinfo import FileInfo
 from scatterbackup.blobinfo import BlobInfo
 
@@ -309,6 +311,7 @@ class Database:
                 [self.current_generation, fileinfo.rowid])
 
             # children
+            # FIXME: this query is slow, use the directory_tbl for speedup
             cur.execute(
                 ("UPDATE fileinfo "
                  "SET death = ? "
@@ -389,7 +392,7 @@ class Database:
              "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
              "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
              "WHERE "
-             +  gen_limit_stmt +
+             + gen_limit_stmt +
              "  path = cast(? as TEXT)"
              "ORDER BY birth ASC"),
             [os.fsencode(path)])
@@ -494,7 +497,7 @@ class Database:
         cur.execute(
             ("SELECT * "
              "FROM generation "
-             "WHERE start <= ? AND ? < end"),
+             "WHERE id <= ? AND ? < id"),
             [start, end])
         rows = FetchAllIter(cur)
         return [generation_from_row(row) for row in rows]

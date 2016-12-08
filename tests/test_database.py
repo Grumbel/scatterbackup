@@ -66,7 +66,7 @@ class DatabaseTestCase(unittest.TestCase):
         self.assertEqual(len(results), 3)
 
     def test_get_generation(self):
-        gens = self.db.get_generation()
+        gens = self.db.get_generations(0, 100)
         self.assertEqual(len(gens), 0)
 
 
