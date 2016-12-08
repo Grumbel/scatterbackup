@@ -150,26 +150,30 @@ class UpdateAction:
                 else:
                     self.info("{}: file already in db, nothing to do".format(fs_fi.path))
 
-    def process_directory(self, directory):
+    def process_directory(self, directory, recursive=True):
         # root directory
         fi_db = self.db.get_by_path(directory)
         self.process_dirs([FileInfo.from_file(directory)],
                           [fi_db] if fi_db is not None else [])
 
         # content of root directory
-        fs_gen = scan_fileinfos(directory,
-                                relative=self.relative,
-                                # prefix=prefix,  # FIXME: prefix not implemented
-                                checksums=False,
-                                excludes=self.excludes,
-                                onerror=self.error)
+        if os.path.isdir(directory):
+            fs_gen = scan_fileinfos(directory,
+                                    relative=self.relative,
+                                    # prefix=prefix,  # FIXME: prefix not implemented
+                                    checksums=False,
+                                    excludes=self.excludes,
+                                    onerror=self.error)
 
-        for root, fs_dirs, fs_files in fs_gen:
-            result = self.db.get_directory_by_path(root)
-            db_dirs, db_files = fileinfos_split(result)
+            if not recursive:
+                fs_gen = [next(fs_gen)]
 
-            self.process_dirs(fs_dirs, db_dirs)
-            self.process_files(fs_files, db_files)
+            for root, fs_dirs, fs_files in fs_gen:
+                result = self.db.get_directory_by_path(root)
+                db_dirs, db_files = fileinfos_split(result)
+
+                self.process_dirs(fs_dirs, db_dirs)
+                self.process_files(fs_files, db_files)
 
 
 def parse_args():
@@ -196,6 +200,8 @@ def parse_args():
                         help="Import data from .js file")
     parser.add_argument('-o', '--output', type=str, default=None,
                         help="Set the output filename")
+    parser.add_argument('-D', '--non-recursive', action='store_true', default=False,
+                        help="Only process given directory")
     return parser.parse_args()
 
 
@@ -230,7 +236,7 @@ def main():
                 update.prefix = args.prefix
                 update.excludes = cfg.excludes
 
-                update.process_directory(directory)
+                update.process_directory(directory, not args.non_recursive)
 
         db.commit()
 
