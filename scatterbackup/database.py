@@ -25,6 +25,13 @@ from scatterbackup.fileinfo import FileInfo
 from scatterbackup.blobinfo import BlobInfo
 
 
+def path_iter(path):
+    yield path
+    while path != "/":
+        path = os.path.dirname(path)
+        yield path
+
+
 def generation_from_row(row):
     if len(row) != 3:
         raise Exception("generation_from_row: to many columns: {}".format(row))
@@ -165,7 +172,8 @@ class Database:
         cur.execute((
             "CREATE TABLE IF NOT EXISTS directory("
             "id INTEGER PRIMARY KEY, "
-            "path TEXT UNIQUE"
+            "path TEXT UNIQUE, "
+            "parent_id INTEGER"
             ")"))
 
         cur.execute((
@@ -191,9 +199,10 @@ class Database:
         def py_dirname(p):
             try:
                 if p is None:
+                    print("WHY?!")
                     return None
                 else:
-                    return os.path.dirname(p)
+                    return os.fsencode(os.path.dirname(p))
             except:
                 print("ERROR", sys.exc_info())
                 return None
@@ -205,21 +214,32 @@ class Database:
             print("creating directory table")
             cur.execute(
                 "INSERT OR IGNORE INTO directory "
-                "SELECT NULL, py_dirname(path) FROM fileinfo")
+                "SELECT NULL, cast(py_dirname(path) AS TEXT) FROM fileinfo")
 
+        if False:
+            print("making parent_id")
+            cur.execute("INSERT OR IGNORE INTO directory SELECT NULL, cast(py_dirname(path) AS TEXT), id FROM directory")
+            print("making parent_id: done")
+            cur.execute("UPDATE directory "
+                        "SET parent_id = (SELECT t.id FROM directory AS t WHERE t.path = cast(py_dirname(directory.path) AS TEXT)) "
+                        "WHERE parent_id IS NULL")
+            print("making parent_id2: done")
+
+        if False:
             print("updating directory_id in fileinfo")
             cur.execute(
                 "UPDATE fileinfo "
-                "SET directory_id = (SELECT id FROM directory WHERE directory.path = py_dirname(fileinfo.path))")
+                "SET directory_id = (SELECT id FROM directory WHERE directory.path = cast(py_dirname(fileinfo.path) AS TEXT))")
             print("CONVERT DONE")
 
         cur.execute("CREATE INDEX IF NOT EXISTS fileinfo_index ON fileinfo (path)")
         cur.execute("CREATE INDEX IF NOT EXISTS fileinfo_directory_id_index ON fileinfo (directory_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS fileinfo2_index ON fileinfo (death, path)")
-        cur.execute("CREATE INDEX IF NOT EXISTS directory_path_index ON fileinfo (path)")
+        cur.execute("CREATE INDEX IF NOT EXISTS directory_path_index ON directory (path)")
         cur.execute("CREATE INDEX IF NOT EXISTS blobinfo_fileinfo_id_index ON blobinfo (fileinfo_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS blobinfo_sha1_index ON blobinfo (sha1)")
         cur.execute("CREATE INDEX IF NOT EXISTS blobinfo_md5_index ON blobinfo (md5)")
+        self.con.commit()
 
     def init_generation(self, cmd):
         cur = self.con.cursor()
@@ -228,6 +248,30 @@ class Database:
                      "(NULL, ?, ?)"),
                     [cmd, current_time])
         self.current_generation = cur.lastrowid
+
+    def store_directory(self, path):
+        cur = self.con.cursor()
+        cur.execute("SELECT id "
+                    "FROM directory "
+                    "WHERE path = cast(? AS TEXT)",
+                    [os.fsencode(path)])
+        rows = cur.fetchall()
+        if len(rows) == 1:
+            return rows[0][0]
+        else:
+            # create path entries
+            for p in path_iter(path):
+                cur.execute(
+                    "INSERT OR IGNORE INTO directory "
+                    "VALUES (NULL, cast(? AS TEXT), NULL)",
+                    [os.fsencode(path)])
+
+            # update parent_ids
+            cur.execute("UPDATE directory "
+                        "SET parent_id = (SELECT t.id FROM directory AS t WHERE t.path = cast(py_dirname(directory.path) AS TEXT)) "
+                        "WHERE parent_id IS NULL")
+
+        return cur.lastrowid
 
     def store(self, fileinfo):
         cur = self.con.cursor()
@@ -239,14 +283,7 @@ class Database:
 
         if fileinfo.directory_id is None:
             dname = os.path.dirname(fileinfo.path)
-            cur.execute(
-                "INSERT OR IGNORE INTO directory "
-                "VALUES (NULL, cast(? AS TEXT))",
-                [os.fsencode(dname)])
-            cur.execute(
-                "SELECT id FROM directory WHERE path = cast(? AS TEXT)",
-                [os.fsencode(dname)])
-            fileinfo.directory_id = cur.fetchall()[0][0]
+            fileinfo.directory_id = self.store_directory(dname)
 
         # print("store...", fileinfo.path)
         cur.execute(
@@ -565,6 +602,11 @@ class Database:
              "FROM fileinfo "
              "WHERE death IS NOT NULL"))
         print("{} dead files in database".format(cur.fetchall()[0][0]))
+
+        cur.execute(
+            ("SELECT COUNT(*) "
+             "FROM directory"))
+        print("{} directories in database".format(cur.fetchall()[0][0]))
 
 
 class NullDatabase:
