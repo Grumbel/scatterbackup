@@ -279,7 +279,13 @@ class Database:
                         "  WHERE t.path = cast(py_dirname(directory.path) AS TEXT)) "
                         "WHERE parent_id IS NULL")
 
-        return cur.lastrowid
+            # retry to query the directory_id
+            cur.execute("SELECT id "
+                        "FROM directory "
+                        "WHERE path = cast(? AS TEXT)",
+                        [os.fsencode(path)])
+            rows = cur.fetchall()
+            return rows[0][0]
 
     def store(self, fileinfo):
         cur = self.con.cursor()
