@@ -633,6 +633,15 @@ class Database:
              "FROM directory"))
         print("{} directories in database".format(cur.fetchall()[0][0]))
 
+    def dump(self):
+        """Dump the content of the database to stdout"""
+        cur = self.con.cursor()
+        for tbl in ['fileinfo', 'directory', 'blobinfo', 'linkinfo', 'generation']:
+            print("\n{}:".format(tbl))
+            cur.execute("SELECT * FROM {}".format(tbl))
+            for row in FetchAllIter(cur):
+                print(" ", row)
+
 
 class NullDatabase:
 
