@@ -125,7 +125,7 @@ class Database:
 
     def init_tables(self):
         cur = self.con.cursor()
-        cur.execute((
+        cur.execute(
             "CREATE TABLE IF NOT EXISTS fileinfo("
             "id INTEGER PRIMARY KEY, "
             # "storage_id INTEGER, "
@@ -158,43 +158,43 @@ class Database:
             "death INTEGER, "
 
             "directory_id INTEGER"
-            ")"))
+            ")")
 
-        cur.execute((
+        cur.execute(
             "CREATE TABLE IF NOT EXISTS blobinfo("
             "id INTEGER PRIMARY KEY, "
             "fileinfo_id INTEGER, "
             "size INTEGER, "
             "md5 TEXT, "
             "sha1 TEXT"
-            ")"))
+            ")")
 
-        cur.execute((
+        cur.execute(
             "CREATE TABLE IF NOT EXISTS directory("
             "id INTEGER PRIMARY KEY, "
             "path TEXT UNIQUE, "
             "parent_id INTEGER"
-            ")"))
+            ")")
 
-        cur.execute((
+        cur.execute(
             "CREATE TABLE IF NOT EXISTS linkinfo("
             "id INTEGER PRIMARY KEY, "
             "fileinfo_id INTEGER, "
             "target TEXT "
-            ")"))
+            ")")
 
-        cur.execute((
+        cur.execute(
             "CREATE TABLE IF NOT EXISTS storageinfo("
             "id INTEGER PRIMARY KEY, "
             "name TEXT"
-            ")"))
+            ")")
 
-        cur.execute((
+        cur.execute(
             "CREATE TABLE IF NOT EXISTS generation("
             "id INTEGER PRIMARY KEY, "
             "command TEXT, "
             "time INTEGER"
-            ")"))
+            ")")
 
         def py_dirname(p):
             try:
@@ -218,10 +218,13 @@ class Database:
 
         if False:
             print("making parent_id")
-            cur.execute("INSERT OR IGNORE INTO directory SELECT NULL, cast(py_dirname(path) AS TEXT), id FROM directory")
+            cur.execute("INSERT OR IGNORE INTO directory "
+                        "SELECT NULL, cast(py_dirname(path) AS TEXT), id FROM directory")
             print("making parent_id: done")
             cur.execute("UPDATE directory "
-                        "SET parent_id = (SELECT t.id FROM directory AS t WHERE t.path = cast(py_dirname(directory.path) AS TEXT)) "
+                        "SET parent_id = ("
+                        "  SELECT t.id FROM directory AS t "
+                        "  WHERE t.path = cast(py_dirname(directory.path) AS TEXT)) "
                         "WHERE parent_id IS NULL")
             print("making parent_id2: done")
 
@@ -229,7 +232,9 @@ class Database:
             print("updating directory_id in fileinfo")
             cur.execute(
                 "UPDATE fileinfo "
-                "SET directory_id = (SELECT id FROM directory WHERE directory.path = cast(py_dirname(fileinfo.path) AS TEXT))")
+                "SET directory_id = ("
+                "  SELECT id FROM directory "
+                "  WHERE directory.path = cast(py_dirname(fileinfo.path) AS TEXT))")
             print("CONVERT DONE")
 
         cur.execute("CREATE INDEX IF NOT EXISTS fileinfo_index ON fileinfo (path)")
@@ -245,8 +250,8 @@ class Database:
     def init_generation(self, cmd):
         cur = self.con.cursor()
         current_time = int(round(time.time() * 1000**3))
-        cur.execute(("INSERT INTO generation VALUES"
-                     "(NULL, ?, ?)"),
+        cur.execute("INSERT INTO generation VALUES"
+                    "(NULL, ?, ?)",
                     [cmd, current_time])
         self.current_generation = cur.lastrowid
 
@@ -269,7 +274,9 @@ class Database:
 
             # update parent_ids
             cur.execute("UPDATE directory "
-                        "SET parent_id = (SELECT t.id FROM directory AS t WHERE t.path = cast(py_dirname(directory.path) AS TEXT)) "
+                        "SET parent_id = ("
+                        "  SELECT t.id FROM directory AS t "
+                        "  WHERE t.path = cast(py_dirname(directory.path) AS TEXT)) "
                         "WHERE parent_id IS NULL")
 
         return cur.lastrowid
@@ -313,13 +320,13 @@ class Database:
         fileinfo_id = cur.lastrowid
 
         if fileinfo.blob is not None:
-            cur.execute(("INSERT INTO blobinfo VALUES"
-                         "(NULL, ?, ?, ?, ?)"),
+            cur.execute("INSERT INTO blobinfo VALUES"
+                        "(NULL, ?, ?, ?, ?)",
                         (fileinfo_id, fileinfo.blob.size, fileinfo.blob.md5, fileinfo.blob.sha1))
 
         if fileinfo.target is not None:
-            cur.execute(("INSERT INTO linkinfo VALUES"
-                         "(NULL, ?, ?)"),
+            cur.execute("INSERT INTO linkinfo VALUES"
+                        "(NULL, ?, ?)",
                         (fileinfo_id, fileinfo.target))
 
         # auto-commit if certain thresholds are crossed
