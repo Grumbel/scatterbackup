@@ -236,10 +236,16 @@ def main():
             # suspend auto-commit triggering on import
             db.max_insert_count = None
             db.max_insert_size = None
+
             with scatterbackup.sbtr.open_sbtr(args.import_file) as fin:
+                i = 0
                 for line in fin:
+                    if i % 10000 == 0:
+                        print("{} entries imported".format(i))
                     fileinfo = scatterbackup.FileInfo.from_json(line)
                     db.store(fileinfo)
+                    i += 1
+                print("{} entries imported".format(i))
         else:
             for path in (os.path.abspath(d) for d in args.PATH):
                 update = UpdateAction(db)
