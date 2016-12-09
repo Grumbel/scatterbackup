@@ -150,36 +150,47 @@ class UpdateAction:
                 else:
                     self.info("{}: file already in db, nothing to do".format(fs_fi.path))
 
-    def process_directory(self, directory, recursive=True):
+    def process_directory(self, fi_fs, recursive=True):
         # root directory
-        fi_db = self.db.get_by_path(directory)
-        self.process_dirs([FileInfo.from_file(directory)],
+        fi_db = self.db.get_by_path(fi_fs.path) or []
+        self.process_dirs([fi_fs],
                           [fi_db] if fi_db is not None else [])
 
         # content of root directory
-        if os.path.isdir(directory):
-            fs_gen = scan_fileinfos(directory,
-                                    relative=self.relative,
-                                    # prefix=prefix,  # FIXME: prefix not implemented
-                                    checksums=False,
-                                    excludes=self.excludes,
-                                    onerror=self.error)
+        fs_gen = scan_fileinfos(fi_fs.path,
+                                relative=self.relative,
+                                # prefix=prefix,  # FIXME: prefix not implemented
+                                checksums=False,
+                                excludes=self.excludes,
+                                onerror=self.error)
 
-            if not recursive:
-                fs_gen = [next(fs_gen)]
+        if not recursive:
+            fs_gen = [next(fs_gen)]
 
-            for root, fs_dirs, fs_files in fs_gen:
-                result = self.db.get_directory_by_path(root)
-                db_dirs, db_files = fileinfos_split(result)
+        for root, fs_dirs, fs_files in fs_gen:
+            result = self.db.get_directory_by_path(root)
+            db_dirs, db_files = fileinfos_split(result)
 
-                self.process_dirs(fs_dirs, db_dirs)
-                self.process_files(fs_files, db_files)
+            self.process_dirs(fs_dirs, db_dirs)
+            self.process_files(fs_files, db_files)
+
+    def process_file(self, fi_fs):
+        fi_db = self.db.get_by_path(fi_fs.path)
+        self.process_files([fi_fs],
+                           [fi_db] if fi_db is not None else [])
+
+    def process_path(self, path, recursive=True):
+        fi = FileInfo.from_file(path)
+        if fi.kind == "directory":
+            self.process_directory(fi)
+        else:
+            self.process_file(fi)
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Collect FileInfo')
-    parser.add_argument('DIRECTORY', action='store', type=str, nargs='*',
-                        help='directory containing the mod')
+    parser.add_argument('PATH', action='store', type=str, nargs='*',
+                        help='PATH to process')
     parser.add_argument('-v', '--verbose', action='store_true', default=False,
                         help="be more verbose")
     parser.add_argument('-q', '--quiet', action='store_true', default=False,
@@ -227,7 +238,7 @@ def main():
                     fileinfo = scatterbackup.FileInfo.from_json(line)
                     db.store(fileinfo)
         else:
-            for directory in (os.path.abspath(d) for d in args.DIRECTORY):
+            for path in (os.path.abspath(d) for d in args.PATH):
                 update = UpdateAction(db)
 
                 update.verbose = args.verbose
@@ -236,7 +247,7 @@ def main():
                 update.prefix = args.prefix
                 update.excludes = cfg.excludes
 
-                update.process_directory(directory, not args.non_recursive)
+                update.process_path(path, not args.non_recursive)
 
         db.commit()
 
