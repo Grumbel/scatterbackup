@@ -233,6 +233,9 @@ def main():
 
     try:
         if args.import_file:
+            # suspend auto-commit triggering on import
+            db.max_insert_count = None
+            db.max_insert_size = None
             with scatterbackup.sbtr.open_sbtr(args.import_file) as fin:
                 for line in fin:
                     fileinfo = scatterbackup.FileInfo.from_json(line)

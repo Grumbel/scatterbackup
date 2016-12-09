@@ -341,8 +341,8 @@ class Database:
         if fileinfo.blob is not None:
             self.insert_size += fileinfo.blob.size
 
-        if self.insert_count >= self.max_insert_count or \
-           self.insert_size >= self.max_insert_size:
+        if (self.max_insert_count is not None and self.insert_count >= self.max_insert_count) or \
+           (self.max_insert_size is not None and self.insert_size >= self.max_insert_size):
             # if time.time() > self.last_commit_time + 5.0:
             self.commit()
 
