@@ -16,7 +16,6 @@
 
 
 import argparse
-import shlex
 import os
 
 import scatterbackup
