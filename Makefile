@@ -42,7 +42,7 @@ clean:
 	rm -vrf .pylint/
 
 install:
-	pip3 install .
+	sudo -H pip3 install --force-reinstall --ignore-installed .
 
 .PHONY: autopep test flake pylint clean
 
