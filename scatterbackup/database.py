@@ -266,11 +266,10 @@ class Database:
             return rows[0][0]
         else:
             # create path entries
-            for p in path_iter(path):
-                cur.execute(
-                    "INSERT OR IGNORE INTO directory "
-                    "VALUES (NULL, cast(? AS TEXT), NULL)",
-                    [os.fsencode(path)])
+            cur.executemany(
+                "INSERT OR IGNORE INTO directory "
+                "VALUES (NULL, cast(? AS TEXT), NULL)",
+                [[os.fsencode(p)] for p in path_iter(path)])
 
             # update parent_ids
             cur.execute("UPDATE directory "
