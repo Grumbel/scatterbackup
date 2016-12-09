@@ -358,26 +358,30 @@ class Database:
             # statement
             cur.execute("SELECT id FROM directory WHERE path = cast(? AS TEXT)",
                         [os.fsencode(fileinfo.path)])
-            root_directory_id = cur.fetchall()[0][0]
+            rows = cur.fetchall()
+            if len(rows) != 1:
+                print("mark_removed_recursive: directory not found: {}".format(fileinfo.path))
+            else:
+                root_directory_id = rows[0][0]
 
-            # remove all the children of the root node
-            cur.execute(
-                "WITH RECURSIVE "
+                # remove all the children of the root node
+                cur.execute(
+                    "WITH RECURSIVE "
 
-                # create a list of directory.id that are to be removed
-                "child_dirs(x) AS ( "
-                "  VALUES(?) "
-                "  UNION ALL "
-                "  SELECT id "
-                "  FROM directory, child_dirs "
-                "  WHERE parent_id = x "
-                ") "
+                    # create a list of directory.id that are to be removed
+                    "child_dirs(x) AS ( "
+                    "  VALUES(?) "
+                    "  UNION ALL "
+                    "  SELECT id "
+                    "  FROM directory, child_dirs "
+                    "  WHERE parent_id = x "
+                    ") "
 
-                "UPDATE fileinfo "
-                "SET death = ? "
-                "WHERE directory_id IN child_dirs AND death is NULL",
-                [root_directory_id,
-                 self.current_generation])
+                    "UPDATE fileinfo "
+                    "SET death = ? "
+                    "WHERE directory_id IN child_dirs AND death is NULL",
+                    [root_directory_id,
+                     self.current_generation])
 
             # remove the root node itself
             cur.execute(
