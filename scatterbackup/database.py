@@ -236,6 +236,7 @@ class Database:
         cur.execute("CREATE INDEX IF NOT EXISTS fileinfo_directory_id_index ON fileinfo (directory_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS fileinfo2_index ON fileinfo (death, path)")
         cur.execute("CREATE INDEX IF NOT EXISTS directory_path_index ON directory (path)")
+        cur.execute("CREATE INDEX IF NOT EXISTS directory_parent_id_index ON directory (parent_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS blobinfo_fileinfo_id_index ON blobinfo (fileinfo_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS blobinfo_sha1_index ON blobinfo (sha1)")
         cur.execute("CREATE INDEX IF NOT EXISTS blobinfo_md5_index ON blobinfo (md5)")
@@ -340,21 +341,38 @@ class Database:
         else:
             cur = self.con.cursor()
 
-            # root
+            # "WITH RECURSIVE" is *much* faster when we use a plain
+            # value in the initial-select instead of this SELECT
+            # statement
+            cur.execute("SELECT id FROM directory WHERE path = cast(? AS TEXT)",
+                        [os.fsencode(fileinfo.path)])
+            root_directory_id = cur.fetchall()[0][0]
+
+            # remove all the children of the root node
+            cur.execute(
+                "WITH RECURSIVE "
+
+                # create a list of directory.id that are to be removed
+                "child_dirs(x) AS ( "
+                "  VALUES(?) "
+                "  UNION ALL "
+                "  SELECT id "
+                "  FROM directory, child_dirs "
+                "  WHERE parent_id = x "
+                ") "
+
+                "UPDATE fileinfo "
+                "SET death = ? "
+                "WHERE directory_id IN child_dirs AND death is NULL",
+                [root_directory_id,
+                 self.current_generation])
+
+            # remove the root node itself
             cur.execute(
                 ("UPDATE fileinfo "
                  "SET death = ? "
                  "WHERE fileinfo.id = ?"),
                 [self.current_generation, fileinfo.rowid])
-
-            # children
-            # FIXME: this query is slow, use the directory_tbl for speedup
-            cur.execute(
-                ("UPDATE fileinfo "
-                 "SET death = ? "
-                 "WHERE fileinfo.path GLOB cast(? AS TEXT)"),
-                [self.current_generation,
-                 os.fsencode(os.path.join(fileinfo.path, "*"))])
 
     def mark_removed(self, fileinfo):
         if fileinfo.rowid is None:
