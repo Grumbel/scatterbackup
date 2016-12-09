@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3
 
 # ScatterBackup - A chaotic backup solution
 # Copyright (C) 2015 Ingo Ruhnke <grumbel@gmail.com>

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # ScatterBackup - A chaotic backup solution
 # Copyright (C) 2015 Ingo Ruhnke <grumbel@gmail.com>
 #
@@ -14,36 +16,27 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-SOURCES := $(wildcard \
-  scatterbackup/*.py \
-  tests/*.py)
 
-all: flake test # autopep
+import unittest
 
-autopep:
-	autopep8  --max-line=120  --in-place $(SOURCES)
+import scatterbackup
 
-test:
-	python3 -m unittest discover -s tests/
 
-flake:
-	flake8 --max-line-length=120 $(SOURCES)
+class UtilTestCase(unittest.TestCase):
 
-PYLINT_TARGETS := $(addprefix .pylint/, $(SOURCES))
+    def test_walk(self):
+        result = list(scatterbackup.walk("tests/data"))
+        expected = [('tests/data',
+                     ['subdir'],
+                     ['test.txt', 'symlink.lnk']),
+                    ('tests/data/subdir',
+                     [],
+                     ['test.txt'])]
+        self.assertListEqual(result, expected)
 
-$(PYLINT_TARGETS): .pylint/%.py: %.py
-	mkdir -p $(dir $@)
-	PYTHONPATH=. epylint3 $< --rcfile=.pylintrc --max-line-length=120
-	touch $@
 
-pylint: $(PYLINT_TARGETS)
+if __name__ == '__main__':
+    unittest.main()
 
-clean:
-	rm -vrf .pylint/
-
-install:
-	pip3 install .
-
-.PHONY: autopep test flake pylint clean
 
 # EOF #

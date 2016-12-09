@@ -1,14 +1,13 @@
 # See https://docs.python.org/3/license.html for license information
 
 
-from os import fspath, scandir, path
+from os import scandir, path, name, stat, st, listdir
 
 
-# This is the os.walk() function from Python-3.6.0, modified such that
+# This is the os.walk() function from Python-3.5.2, modified such that
 # it returns symlinks to directories in the 'nodirs' portion of the
 # result tuple instead of the 'dirs' one.
 def walk(top, topdown=True, onerror=None, followlinks=False):
-    # pylint: disable=too-many-locals,too-many-branches
     """Directory tree generator.
 
     For each directory in the directory tree rooted at top (including top
@@ -66,10 +65,9 @@ def walk(top, topdown=True, onerror=None, followlinks=False):
             dirs.remove('CVS')  # don't visit CVS directories
 
     """
-    top = fspath(top)
+
     dirs = []
     nondirs = []
-    walk_dirs = []
 
     # We may not have read permission for top, in which case we can't
     # get a list of the files the directory contains.  os.walk
@@ -77,56 +75,49 @@ def walk(top, topdown=True, onerror=None, followlinks=False):
     # minor reason when (say) a thousand readable directories are still
     # left to visit.  That logic is copied here.
     try:
-        # Note that scandir is global in this module due
-        # to earlier import-*.
-        scandir_it = scandir(top)
+        if name == 'nt' and isinstance(top, bytes):
+            scandir_it = _dummy_scandir(top)
+        else:
+            # Note that scandir is global in this module due
+            # to earlier import-*.
+            scandir_it = scandir(top)
+        entries = list(scandir_it)
     except OSError as error:
         if onerror is not None:
             onerror(error)
         return
 
-    with scandir_it:
-        while True:
-            try:
-                try:
-                    entry = next(scandir_it)
-                except StopIteration:
-                    break
-            except OSError as error:
-                if onerror is not None:
-                    onerror(error)
-                return
+    for entry in entries:
+        try:
+            is_dir = entry.is_dir()
+        except OSError:
+            # If is_dir() raises an OSError, consider that the entry is not
+            # a directory, same behaviour than os.path.isdir().
+            is_dir = False
 
-            try:
-                is_dir = entry.is_dir()
-            except OSError:
-                # If is_dir() raises an OSError, consider that the entry is not
-                # a directory, same behaviour than os.path.isdir().
-                is_dir = False
+        try:
+            is_symlink = entry.is_symlink()
+        except OSError:
+            # If is_symlink() raises an OSError, consider that the
+            # entry is not a symbolic link, same behaviour than
+            # os.path.islink().
+            is_symlink = False
 
-            try:
-                is_symlink = entry.is_symlink()
-            except OSError:
-                # If is_symlink() raises an OSError, consider that the
-                # entry is not a symbolic link, same behaviour than
-                # os.path.islink().
-                is_symlink = False
+        if is_dir and not is_symlink:
+            dirs.append(entry.name)
+        else:
+            nondirs.append(entry.name)
 
-            if is_dir and not is_symlink:
-                dirs.append(entry.name)
+        if not topdown and is_dir:
+            # Bottom-up: recurse into sub-directory, but exclude symlinks to
+            # directories if followlinks is False
+            if followlinks:
+                walk_into = True
             else:
-                nondirs.append(entry.name)
+                walk_into = not is_symlink
 
-            if not topdown and is_dir:
-                # Bottom-up: recurse into sub-directory, but exclude symlinks to
-                # directories if followlinks is False
-                if followlinks:
-                    walk_into = True
-                else:
-                    walk_into = not is_symlink
-
-                if walk_into:
-                    walk_dirs.append(entry.path)
+            if walk_into:
+                yield from walk(entry.path, topdown, onerror, followlinks)
 
     # Yield before recursion if going top down
     if topdown:
@@ -143,11 +134,58 @@ def walk(top, topdown=True, onerror=None, followlinks=False):
             if followlinks or not islink(new_path):
                 yield from walk(new_path, topdown, onerror, followlinks)
     else:
-        # Recurse into sub-directories
-        for new_path in walk_dirs:
-            yield from walk(new_path, topdown, onerror, followlinks)
         # Yield after recursion if going bottom up
         yield top, dirs, nondirs
+
+
+class _DummyDirEntry:
+    """Dummy implementation of DirEntry
+
+    Only used internally by os.walk(bytes). Since os.walk() doesn't need the
+    follow_symlinks parameter: don't implement it, always follow symbolic
+    links.
+    """
+
+    def __init__(self, dir, name):
+        self.name = name
+        self.path = path.join(dir, name)
+        # Mimick FindFirstFile/FindNextFile: we should get file attributes
+        # while iterating on a directory
+        self._stat = None
+        self._lstat = None
+        try:
+            self.stat(follow_symlinks=False)
+        except OSError:
+            pass
+
+    def stat(self, *, follow_symlinks=True):
+        if follow_symlinks:
+            if self._stat is None:
+                self._stat = stat(self.path)
+            return self._stat
+        else:
+            if self._lstat is None:
+                self._lstat = stat(self.path, follow_symlinks=False)
+            return self._lstat
+
+    def is_dir(self):
+        if self._lstat is not None and not self.is_symlink():
+            # use the cache lstat
+            stat = self.stat(follow_symlinks=False)
+            return st.S_ISDIR(stat.st_mode)
+
+        stat = self.stat()
+        return st.S_ISDIR(stat.st_mode)
+
+    def is_symlink(self):
+        stat = self.stat(follow_symlinks=False)
+        return st.S_ISLNK(stat.st_mode)
+
+
+def _dummy_scandir(dir):
+    # listdir-based implementation for bytes patches on Windows
+    for n in listdir(dir):
+        yield _DummyDirEntry(dir, n)
 
 
 # EOF #
