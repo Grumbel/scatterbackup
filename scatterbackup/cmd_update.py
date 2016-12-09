@@ -152,7 +152,7 @@ class UpdateAction:
 
     def process_directory(self, fi_fs, recursive=True):
         # root directory
-        fi_db = self.db.get_by_path(fi_fs.path) or []
+        fi_db = self.db.get_by_path(fi_fs.path)
         self.process_dirs([fi_fs],
                           [fi_db] if fi_db is not None else [])
 
