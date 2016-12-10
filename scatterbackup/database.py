@@ -94,15 +94,6 @@ def fileinfo_from_row(row):
     return fileinfo
 
 
-def FetchAllIter(cur):
-    while True:
-        results = cur.fetchmany()
-        if results == []:
-            break
-        for result in results:
-            yield result
-
-
 class Database:
 
     def __init__(self, filename):
@@ -416,10 +407,10 @@ class Database:
              "  path NOT GLOB cast(? AS TEXT) AND"
              "  fileinfo.death is NULL "),
             [os.fsencode(path_glob), os.fsencode(path_not_glob)])
-        rows = FetchAllIter(cur)
-        return (fileinfo_from_row(row) for row in rows)
+        return (fileinfo_from_row(row) for row in cur)
 
     def get_directory_by_path(self, path):
+        """Returns the directory given by 'path', does not recurse into the directory"""
         cur = self.con.cursor()
         cur.execute(
             ("SELECT id "
@@ -443,9 +434,8 @@ class Database:
                  "  fileinfo.death is NULL AND "
                  "  fileinfo.directory_id = ?"),
                 [rowid])
-            rows = FetchAllIter(cur)
 
-            return (fileinfo_from_row(row) for row in rows)
+            return (fileinfo_from_row(row) for row in cur)
 
     def get_by_path_many(self, path):
         return self.get_by_path(path, all_matches=True)
@@ -485,8 +475,7 @@ class Database:
              "FROM fileinfo "
              "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
              "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "))
-        rows = FetchAllIter(cur)
-        return (fileinfo_from_row(row) for row in rows)
+        return (fileinfo_from_row(row) for row in cur)
 
     def get_by_glob(self, pattern):
         cur = self.con.cursor()
@@ -499,8 +488,7 @@ class Database:
              "  fileinfo.death is NULL AND "
              "  path glob cast(? as TEXT)"),
             [os.fsencode(pattern)])
-        rows = FetchAllIter(cur)
-        return (fileinfo_from_row(row) for row in rows)
+        return (fileinfo_from_row(row) for row in cur)
 
     def get_duplicates(self, path):
         cur = self.con.cursor()
@@ -544,11 +532,9 @@ class Database:
         arg = os.path.join(os.fsencode(path), b"*")
         cur.execute(stmt, [arg, arg])
 
-        rows = FetchAllIter(cur)
-
         current_sha1 = None
         group = []
-        for row in rows:
+        for row in cur:
             fileinfo = fileinfo_from_row(row)
 
             if current_sha1 != fileinfo.blob.sha1:
@@ -570,8 +556,7 @@ class Database:
              "FROM generation "
              "WHERE id <= ? AND ? < id"),
             [start, end])
-        rows = FetchAllIter(cur)
-        return [generation_from_row(row) for row in rows]
+        return [generation_from_row(row) for row in cur]
 
     def fsck(self):
         # check for path that have multiple alive FileInfo associated with them
@@ -585,8 +570,7 @@ class Database:
              "  ) AS birth "
              "GROUP BY path "
              "HAVING COUNT(*) > 1"))
-        rows = FetchAllIter(cur)
-        for row in rows:
+        for row in cur:
             fileinfo = fileinfo_from_row(row)
             print("error: double-alive: {}".format(fileinfo.path))
 
@@ -595,8 +579,7 @@ class Database:
             ("SELECT * "
              "FROM fileinfo "
              "WHERE birth is NULL "))
-        rows = FetchAllIter(cur)
-        for row in rows:
+        for row in cur:
             fileinfo = fileinfo_from_row(row)
             print("error: birth must not be NULL: {}".format(fileinfo.path))
 
@@ -648,7 +631,7 @@ class Database:
         for tbl in ['fileinfo', 'directory', 'blobinfo', 'linkinfo', 'generation']:
             print("\n{}:".format(tbl))
             cur.execute("SELECT * FROM {}".format(tbl))
-            for row in FetchAllIter(cur):
+            for row in cur:
                 print(" ", row)
 
 
