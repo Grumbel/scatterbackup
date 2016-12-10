@@ -275,7 +275,7 @@ class Database:
             cur.execute("UPDATE directory "
                         "SET parent_id = ("
                         "  SELECT t.id FROM directory AS t "
-                        "  WHERE t.path = cast(py_dirname(directory.path) AS TEXT)) "
+                        "  WHERE t.path = directory.path)"
                         "WHERE parent_id IS NULL")
 
             # retry to query the directory_id
