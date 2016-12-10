@@ -20,7 +20,12 @@ import json
 import os
 import sys
 import time
+import subprocess
+import tempfile
+import pprint
 
+from scatterbackup.util import sb_init
+from scatterbackup.database import Database
 import scatterbackup.sbtr
 
 
@@ -36,11 +41,17 @@ import scatterbackup.sbtr
 
 
 def ncdu_directory(node):
-    # leave the fullpath inside the node, it's cut out later
-    return [{"name": node.path,
+    return [{"name": os.path.basename(node.path),
              "asize": 0,
              "dev": node.dev,
              "ino": node.ino}]
+
+
+def ncdu_fake_directory(name):
+    return [{"name": os.path.basename(name) or "/",
+             "asize": 0,
+             "dev": 0,
+             "ino": 0}]
 
 
 def ncdu_file(node):
@@ -55,54 +66,107 @@ def ncdu_file(node):
                 "notreg": True}
 
 
-def ncdu_from_tree_with_header(tree):
+def ncdu_from_fileinfos_with_header(fileinfos):
     return [1, 0,
             {"progname": "scatterbackup",
              "progver": "1.10",
              "timestamp": int(time.time())},
-            ncdu_from_tree(tree)]
+            ncdu_from_fileinfos(fileinfos)]
 
 
-def ncdu_from_tree(tree):
-    directories = {d.path: ncdu_directory(d) for k, d in tree.items() if d.kind == "directory"}
+def build_hierachy(directories):
+    nodes_without_parent = list(directories.items())
 
-    root = None
+    while nodes_without_parent != []:
+        dname, node = nodes_without_parent.pop()
 
-    # attach directories to themselves
-    for k, v in directories.items():
-        parent = directories.get(os.path.dirname(k))
-        if parent is None:
-            if root is None:
-                root = v
-            else:
-                raise Exception("multiple roots in .sbtr")
+        parent_dname = os.path.dirname(dname)
+
+        if parent_dname == dname:
+            pass
         else:
-            # cut down the fullpath to a relative path, except for root
-            v[0]["name"] = os.path.basename(v[0]["name"])
-            parent.append(v)
+            parent_node = directories.get(parent_dname)
 
-    # attach all the files to the directories
-    for k, node in tree.items():
-        if node.kind != "directory":
-            parent = directories.get(os.path.dirname(node.path))
-            if parent is not None:
-                parent.append(ncdu_file(node))
+            if parent_node is None:
+                parent_node = ncdu_fake_directory(parent_dname)
+                nodes_without_parent.append((parent_dname, parent_node))
+                directories[parent_dname] = parent_node
 
-    if root is None:
-        raise Exception("couldn't find root in .sbtr")
+            parent_node.append(node)
+
+
+def get_node_or_fake(directories, dname):
+    node = directories.get(dname)
+
+    if node is not None:
+        return node
+    else:
+        node = ncdu_fake_directory(dname)
+        directories[dname] = node
+        return node
+
+
+def collapse_empty_dirs(directories):
+    dname = "/"
+    node = directories[dname]
+
+    while len(node) == 2 and isinstance(node[1], list) and node[1] != []:
+        dname = os.path.join(dname, node[1][0]['name'])
+        node = node[1]
+
+    node[0]['name'] = dname
+    return node
+
+
+def ncdu_from_fileinfos(fileinfos):
+    dir_fileinfos = (f for f in fileinfos if f.kind == "directory")
+    file_fileinfos = (f for f in fileinfos if f.kind != "directory")
+    directories = {d.path: ncdu_directory(d) for d in dir_fileinfos}
+
+    # attach all the files to their directories or fake directories
+    for fileinfo in file_fileinfos:
+        parent = get_node_or_fake(directories, os.path.dirname(fileinfo.path))
+        parent.append(ncdu_file(fileinfo))
+
+    build_hierachy(directories)
+
+    root = collapse_empty_dirs(directories)
+    # root = directories["/"]
 
     return root
 
 
 def main():
+    sb_init()
+
     parser = argparse.ArgumentParser(description='Convert .sbtr to ncdu syntax')
     parser.add_argument('FILE', action='store', type=str, nargs=1,
                         help='.sbtr file to load')
+    parser.add_argument('-d', '--database', type=str, default=None,
+                        help="Store results in database")
+    parser.add_argument('-o', '--output', metavar="FILE", type=str, default=None,
+                        help="Output results to FILE instead of starting ncdu")
     args = parser.parse_args()
 
-    fileinfos = scatterbackup.sbtr.fileinfos_from_sbtr(args.FILE[0])
-    ncdu_js = ncdu_from_tree_with_header(fileinfos)
-    json.dump(ncdu_js, fp=sys.stdout)
+    db = Database(args.database or scatterbackup.util.make_default_database())
+
+    # fileinfos = scatterbackup.sbtr.fileinfos_from_sbtr(args.FILE[0])
+
+    # FIXME: do some benchmarking on glob vs directory table for tree retrieval
+    # fileinfos = list(db.get_directory_by_path(os.path.abspath(args.FILE[0])))
+    fileinfos = list(db.get_by_glob(os.path.join(os.path.abspath(args.FILE[0]), "*")))
+
+    ncdu_js = ncdu_from_fileinfos_with_header(fileinfos)
+    if args.output is None:
+        with tempfile.NamedTemporaryFile("w") as fout:
+            json.dump(ncdu_js, fp=fout)
+            fout.flush()
+            subprocess.call(["ncdu", "-f", fout.name])
+    elif args.output == "-":
+        json.dump(ncdu_js, fp=sys.stdout)
+    else:
+        with open(args.output, "w") as fout:
+            json.dump(ncdu_js, fp=fout)
 
 
 # EOF #
