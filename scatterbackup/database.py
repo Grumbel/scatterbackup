@@ -501,7 +501,9 @@ class Database:
             "  matching_fileinfo_ids AS ("
             "    SELECT id "
             "    FROM fileinfo "
-            "    WHERE path GLOB CAST(? AS TEXT) "
+            "    WHERE "
+            "      fileinfo.death is NULL AND"
+            "      path GLOB CAST(? AS TEXT) "
             "  ), "
 
             "  duplicate_sha1s AS ("
