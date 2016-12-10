@@ -1,3 +1,5 @@
+# pylint: skip-file
+
 # See https://docs.python.org/3/license.html for license information
 
 

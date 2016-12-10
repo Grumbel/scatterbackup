@@ -22,7 +22,6 @@ import sys
 import time
 import subprocess
 import tempfile
-import pprint
 
 from scatterbackup.util import sb_init
 from scatterbackup.database import Database

@@ -643,7 +643,7 @@ class NullDatabase:
         pass
 
     def store(self, fileinfo):
-        # pylint: disable=locally-disabled, no-self-use
+        # pylint: disable=no-self-use
         print("store:", fileinfo.json())
 
     def commit(self):
