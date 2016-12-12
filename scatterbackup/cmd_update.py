@@ -65,24 +65,21 @@ class UpdateAction:
 
     def __init__(self, db):
         self.db = db
-        self.verbose = False
+        self.verbose = 0
         self.checksums = True
         self.relative = False
         self.prefix = None
         self.excludes = []
 
-    def error(self, err):
+    def log_error(self, err):
         # pylint: disable=no-self-use
         print("{}: cannot process path: {}: {}"
               .format(sys.argv[0], err.filename, err.strerror),
               file=sys.stderr)
 
-    def message(self, msg):
+    def log_info(self, verbose, msg):
         # pylint: disable=no-self-use
-        print(msg)
-
-    def info(self, msg):
-        if self.verbose:
+        if self.verbose >= verbose:
             print(msg)
 
     def add_checksums(self, fi, ref):
@@ -95,14 +92,14 @@ class UpdateAction:
            ref.mtime == fi.mtime and \
            ref.size == fi.size:
             # recycle checksum from reference FileInfo
-            # self.message("{}: recycling checksums".format(fi.path))
+            # self.log_info(1, "{}: recycling checksums".format(fi.path))
             fi.blob = ref.blob
         elif self.checksums:
-            self.message("{}: calculating checksums".format(fi.path))
+            self.log_info(1, "{}: calculating checksums".format(fi.path))
             try:
                 fi.calc_checksums()
             except OSError as err:
-                self.error(err)
+                self.log_error(err)
 
     def process_dirs(self, fs_dirs, db_dirs):
         joined = join_fileinfos(fs_dirs, db_dirs)
@@ -110,20 +107,20 @@ class UpdateAction:
         #     print("   fs: {!r:40} db: {!r:40}".format(f, d))
         for fs_fi, db_fi in joined:
             if fs_fi is None:
-                self.message("{}: directory removed".format(db_fi.path))
+                self.log_info(1, "{}: directory removed".format(db_fi.path))
                 self.db.mark_removed_recursive(db_fi)
             elif db_fi is None:
-                self.info("{}: storing directory in db".format(fs_fi.path))
+                self.log_info(1, "{}: storing directory in db".format(fs_fi.path))
                 self.db.store(fs_fi)
             else:
                 if file_changed(fs_fi, db_fi):
                     # print("OLD:", fs_fi.json())
                     # print("NEW:", db_fi.json())
-                    self.message("{}: directory changed".format(fs_fi.path))
+                    self.log_info(1, "{}: directory changed".format(fs_fi.path))
                     self.db.mark_removed(db_fi)
                     self.db.store(fs_fi)
                 else:
-                    self.info("{}: directory already in db, nothing to do".format(fs_fi.path))
+                    self.log_info(3, "{}: directory already in db, nothing to do".format(fs_fi.path))
 
     def process_files(self, fs_files, db_files):
         joined = join_fileinfos(fs_files, db_files)
@@ -131,11 +128,11 @@ class UpdateAction:
         #   print("   fs: {!r:40} db: {!r:40}".format(f, d))
         for fs_fi, db_fi in joined:
             if fs_fi is None:
-                self.message("{}: file removed".format(db_fi.path))
+                self.log_info(1, "{}: file removed".format(db_fi.path))
                 self.db.mark_removed(db_fi)
             elif db_fi is None:
                 self.add_checksums(fs_fi, None)
-                self.info("{}: storing file in db".format(fs_fi.path))
+                self.log_info(1, "{}: storing file in db".format(fs_fi.path))
                 self.db.store(fs_fi)
             else:
                 # recycle checksum from database
@@ -144,11 +141,11 @@ class UpdateAction:
                 if file_changed(fs_fi, db_fi):
                     # print("OLD:", fs_fi.json())
                     # print("NEW:", db_fi.json())
-                    self.message("{}: file changed".format(fs_fi.path))
+                    self.log_info(1, "{}: file changed".format(fs_fi.path))
                     self.db.mark_removed(db_fi)
                     self.db.store(fs_fi)
                 else:
-                    self.info("{}: file already in db, nothing to do".format(fs_fi.path))
+                    self.log_info(3, "{}: file already in db, nothing to do".format(fs_fi.path))
 
     def process_directory(self, fi_fs, recursive=True):
         # root directory
@@ -162,12 +159,13 @@ class UpdateAction:
                                 # prefix=prefix,  # FIXME: prefix not implemented
                                 checksums=False,
                                 excludes=self.excludes,
-                                onerror=self.error)
+                                onerror=self.log_error)
 
         if not recursive:
             fs_gen = [next(fs_gen)]
 
         for root, fs_dirs, fs_files in fs_gen:
+            self.log_info(2, "processing {}".format(root))
             result = self.db.get_directory_by_path(root)
             db_dirs, db_files = fileinfos_split(result)
 
@@ -191,8 +189,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Collect FileInfo')
     parser.add_argument('PATH', action='store', type=str, nargs='*',
                         help='PATH to process')
-    parser.add_argument('-v', '--verbose', action='store_true', default=False,
-                        help="be more verbose")
+    parser.add_argument('-v', '--verbose', action='count', default=0,
+                        help="Increase verbosity")
     parser.add_argument('-q', '--quiet', action='store_true', default=False,
                         help="be less verbose")
     parser.add_argument('-n', '--dry-run', action='store_true', default=False,
