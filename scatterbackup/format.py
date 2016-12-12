@@ -43,6 +43,18 @@ class Bytes:
             raise Exception("unknown unit: {}".format(unit))
 
 
+class Checksum:
+
+    def __init__(self, checksum):
+        self.checksum = checksum
+
+    def __format__(self, spec):
+        r = spec.rsplit(":", maxsplit=1)
+        str_spec, cut = r if len(r) == 2 else (r[0], -1)
+        cut = int(cut)
+        return format(self.checksum[0:cut], str_spec)
+
+
 class FileInfoFormatter:
 
     def __init__(self, fileinfo):
@@ -78,8 +90,8 @@ class FileInfoFormatter:
     def birth(self): return self.fileinfo.birth
     def death(self): return self.fileinfo.death
 
-    def sha1(self): return self.fileinfo.blob.sha1 if self.fileinfo.blob else "<sha1:unknown>"
-    def md5(self): return self.fileinfo.blob.md5 if self.fileinfo.blob else "<md5:unknown>"
+    def sha1(self): return Checksum(self.fileinfo.blob.sha1 if self.fileinfo.blob else "<sha1:unknown>")
+    def md5(self): return Checksum(self.fileinfo.blob.md5 if self.fileinfo.blob else "<md5:unknown>")
 
     def target(self): return self.fileinfo.target
 
