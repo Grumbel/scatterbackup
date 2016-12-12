@@ -23,6 +23,7 @@ import scatterbackup
 import scatterbackup.util
 from scatterbackup.util import sb_init
 from scatterbackup.database import Database
+from scatterbackup.format import FileInfoFormatter
 
 
 def make_case_insensitive(pattern):
@@ -61,27 +62,12 @@ def parse_args():
     return parser.parse_args()
 
 
-def fileinfo_to_dict(fileinfo):
-    """Flatten the FileInfo dictionary, so it can be used as format string input"""
-    result = fileinfo.to_js_dict()
-    # FIXME: shall blobinfo be flattened into fileinfo?
-    if "blob" in result:
-        result['md5'] = result['blob']['md5']
-        result['sha1'] = result['blob']['sha1']
-        # result['crc32'] = result['blob']['crc32']
-    else:
-        result['md5'] = "<unknown>"
-        result['sha1'] = "<unknown>"
-        result['crc32'] = "<unknown>"
-    return result
-
-
 def process_fileinfo_json(fileinfo):
     print(fileinfo.json())
 
 
 def process_fileinfo_format(fileinfo, fmt):
-    print(fmt.format_map(fileinfo_to_dict(fileinfo)))
+    print(fmt.format_map(FileInfoFormatter(fileinfo)))
 
 
 def process_fileinfo_regular(fileinfo):

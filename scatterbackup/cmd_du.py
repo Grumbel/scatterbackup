@@ -21,7 +21,7 @@ import os
 import scatterbackup
 import scatterbackup.database
 import scatterbackup.config
-from scatterbackup.units import bytes2human
+from scatterbackup.units import bytes2human_decimal
 from scatterbackup.util import sb_init
 
 
@@ -59,7 +59,7 @@ def main():
             file_count += 1
             total_bytes += fileinfo.size
 
-    print("Total: {} in {} files".format(bytes2human(total_bytes), file_count))
+    print("Total: {} in {} files".format(bytes2human_decimal(total_bytes), file_count))
 
 
 # EOF #

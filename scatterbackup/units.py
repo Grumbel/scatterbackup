@@ -58,7 +58,7 @@ def size2bytes(text: str) -> int:
         raise Exception("couldn't interpret {!r}".format(text))
 
 
-def bytes2human(count):
+def bytes2human_decimal(count):
     """Returns size formated as a human readable string"""
 
     if count < 1000:
@@ -69,8 +69,39 @@ def bytes2human(count):
         return "{:.2f}MB".format(count / 1000**2)
     elif count < 1000 ** 4:
         return "{:.2f}GB".format(count / 1000**3)
-    else:
+    elif count < 1000 ** 5:
         return "{:.2f}TB".format(count / 1000**4)
+    elif count < 1000 ** 6:
+        return "{:.2f}TB".format(count / 1000**5)
+    elif count < 1000 ** 7:
+        return "{:.2f}EB".format(count / 1000**8)
+    elif count < 1000 ** 8:
+        return "{:.2f}ZB".format(count / 1000**9)
+    else:  # count < 1000 ** 9
+        return "{:.2f}YB".format(count / 1000**10)
+
+
+def bytes2human_binary(count):
+    """Returns size formated as a human readable string"""
+
+    if count < 1024:
+        return "{}B".format(count)
+    elif count < 1024 ** 2:
+        return "{:.2f}KiB".format(count / 1024**1)
+    elif count < 1024 ** 3:
+        return "{:.2f}MiB".format(count / 1024**2)
+    elif count < 1024 ** 4:
+        return "{:.2f}GiB".format(count / 1024**3)
+    elif count < 1024 ** 5:
+        return "{:.2f}TiB".format(count / 1024**4)
+    elif count < 1024 ** 6:
+        return "{:.2f}PiB".format(count / 1024**5)
+    elif count < 1024 ** 7:
+        return "{:.2f}EiB".format(count / 1024**8)
+    elif count < 1024 ** 8:
+        return "{:.2f}ZiB".format(count / 1024**9)
+    else:  # count < 1024 ** 9
+        return "{:.2f}YiB".format(count / 1024**10)
 
 
 # EOF #

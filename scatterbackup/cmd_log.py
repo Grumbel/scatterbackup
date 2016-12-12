@@ -22,6 +22,7 @@ import scatterbackup.config
 import scatterbackup.database
 import scatterbackup.time
 from scatterbackup.util import sb_init
+from scatterbackup.units import bytes2human_decimal
 
 
 def parse_args():
@@ -60,11 +61,12 @@ def main():
             fileinfos = sorted(fileinfos, key=lambda fileinfo: fileinfo.birth)
 
             for fileinfo in fileinfos:
-                print("{:18} {!r:>5} {!r:>5} {!r:>10} {} {}"
+                print("{:18} {!r:>5}  {!r:>5}  {!r:>10}  {:>10}  {}  {}"
                       .format(scatterbackup.time.format_time(fileinfo.time),
                               fileinfo.birth,
                               fileinfo.death,
                               fileinfo.ino,
+                              bytes2human_decimal(fileinfo.size),
                               fileinfo.blob and fileinfo.blob.sha1,
                               fileinfo.path))
 

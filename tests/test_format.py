@@ -14,8 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
 import unittest
-from scatterbackup.format import FileInfoFormater, Bytes
+
+from scatterbackup.fileinfo import FileInfo
+from scatterbackup.format import FileInfoFormatter, Bytes
 
 
 class FormatTestCase(unittest.TestCase):
@@ -29,12 +32,13 @@ class FormatTestCase(unittest.TestCase):
         self.assertEqual("592023984B", "{::B}".format(b))
         self.assertEqual("592023984", "{::r}".format(b))
         self.assertEqual("592.02MB", "{}".format(b))
+        self.assertEqual("564.60MiB", "{::H}".format(b))
 
-    # def test_format(self):
-    #     fi_map = FileInfoFormater(None)
-    #     self.assertEqual("592.02MB", "{size::MB}".format_map(fi_map))
-    #     self.assertEqual("551.37MiB", "{size::MiB}".format_map(fi_map))
-    #     self.assertEqual("   551.37MiB", "{size:>12:MiB}".format_map(fi_map))
+    def test_format(self):
+        fileinfo = FileInfo.from_file("tests/data/test.txt")
+        fi_map = FileInfoFormatter(fileinfo)
+        self.assertEqual("0.00MB", "{size::MB}".format_map(fi_map))
+        self.assertEqual("6df4d50a41a5d20bc4faad8a6f09aa8f", "{md5}".format_map(fi_map))
 
 
 # EOF #
