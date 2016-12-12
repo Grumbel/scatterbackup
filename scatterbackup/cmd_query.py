@@ -55,6 +55,10 @@ def parse_args():
                         help="Search by glob pattern")
     parser.add_argument('-G', '--iglob', type=str, action='append', default=[],
                         help="Search by case-insensitive glob pattern")
+    parser.add_argument('--by-sha1', type=str, action='append', default=[],
+                        help="Query the database for the given sha1")
+    parser.add_argument('--by-md5', type=str, action='append', default=[],
+                        help="Query the database for the given md5")
     parser.add_argument('-j', '--json', action='store_true',
                         help="Return results as json")
     parser.add_argument('-f', '--format', type=str,
@@ -98,7 +102,11 @@ def main():
         print_fun = process_fileinfo_regular
 
     # query the database
-    if args.PATH == [] and args.glob == [] and args.iglob == []:
+    if args.PATH == [] and \
+       args.glob == [] and \
+       args.iglob == [] and \
+       args.by_sha1 == [] and \
+       args.by_md5 == []:
         fileinfos = db.get_all()
         for fileinfo in fileinfos:
             process_fileinfo(fileinfo, print_fun, "ALL")
@@ -125,5 +133,18 @@ def main():
             fileinfos = db.get_by_glob(pattern)
             for fileinfo in fileinfos:
                 process_fileinfo(fileinfo, print_fun, pattern)
+
+        # --by-sha1
+        for checksum in args.by_sha1:
+            fileinfos = db.get_by_checksum('sha1', checksum)
+            for fileinfo in fileinfos:
+                process_fileinfo(fileinfo, print_fun, checksum)
+
+        # --by-md5
+        for checksum in args.by_md5:
+            fileinfos = db.get_by_checksum('md5', checksum)
+            for fileinfo in fileinfos:
+                process_fileinfo(fileinfo, print_fun, checksum)
+
 
 # EOF #

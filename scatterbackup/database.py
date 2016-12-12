@@ -490,6 +490,27 @@ class Database:
             [os.fsencode(pattern)])
         return (fileinfo_from_row(row) for row in cur)
 
+    def get_by_checksum(self, checksum_type, checksum):
+        cur = self.con.cursor()
+        cur.execute(
+            "WITH "
+
+            "matching_fileinfos AS ( "
+            "  SELECT fileinfo_id "
+            "  FROM blobinfo "
+            "  WHERE "
+            "    {} = ?) "
+
+            "SELECT * "
+             "FROM fileinfo "
+             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
+             "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
+             "WHERE "
+             "  fileinfo.death is NULL AND "
+             "  fileinfo.id in matching_fileinfos".format(checksum_type),
+            [checksum])
+        return (fileinfo_from_row(row) for row in cur)
+
     def get_duplicates(self, path):
         cur = self.con.cursor()
 
