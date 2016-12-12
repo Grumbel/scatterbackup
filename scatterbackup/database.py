@@ -502,12 +502,12 @@ class Database:
             "    {} = ?) "
 
             "SELECT * "
-             "FROM fileinfo "
-             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
-             "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
-             "WHERE "
-             "  fileinfo.death is NULL AND "
-             "  fileinfo.id in matching_fileinfos".format(checksum_type),
+            "FROM fileinfo "
+            "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
+            "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
+            "WHERE "
+            "  fileinfo.death is NULL AND "
+            "  fileinfo.id in matching_fileinfos".format(checksum_type),
             [checksum])
         return (fileinfo_from_row(row) for row in cur)
 
