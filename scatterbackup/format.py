@@ -50,8 +50,13 @@ class Checksum:
 
     def __format__(self, spec):
         r = spec.rsplit(":", maxsplit=1)
-        str_spec, cut = r if len(r) == 2 else (r[0], -1)
-        cut = int(cut)
+        if len(r) == 2:
+            str_spec = r[0]
+            cut = int(r[1])
+        else:
+            str_spec = r[0]
+            cut = None
+
         return format(self.checksum[0:cut], str_spec)
 
 
