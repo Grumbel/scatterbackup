@@ -183,8 +183,9 @@ class Database:
         cur.execute(
             "CREATE TABLE IF NOT EXISTS generation("
             "id INTEGER PRIMARY KEY, "
-            "command TEXT, "
-            "time INTEGER"
+            "start INTEGER, "
+            "end INTEGER, "
+            "command TEXT"
             ")")
 
         def py_dirname(p):
@@ -213,10 +214,24 @@ class Database:
     def init_generation(self, cmd):
         cur = self.con.cursor()
         current_time = int(round(time.time() * 1000**3))
-        cur.execute("INSERT INTO generation VALUES"
-                    "(NULL, ?, ?)",
+        cur.execute("INSERT INTO generation "
+                    "(command, start) "
+                    "VALUES "
+                    "(?, ?)",
                     [cmd, current_time])
         self.current_generation = cur.lastrowid
+
+        return self.current_generation
+
+    def deinit_generation(self, rowid):
+        cur = self.con.cursor()
+        current_time = int(round(time.time() * 1000**3))
+        cur.execute("UPDATE generation "
+                    "SET "
+                    "  end = ? "
+                    "WHERE "
+                    "  id = ?",
+                    [current_time, rowid])
 
     def store_directory(self, path):
         cur = self.con.cursor()

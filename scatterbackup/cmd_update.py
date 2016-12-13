@@ -227,7 +227,7 @@ def main():
     else:
         db = Database(args.database or scatterbackup.util.make_default_database())
 
-    db.init_generation(" ".join([shlex.quote(a) for a in sys.argv]))
+    gen = db.init_generation(" ".join([shlex.quote(a) for a in sys.argv]))
 
     try:
         if args.import_file:
@@ -256,6 +256,7 @@ def main():
 
                 update.process_path(path, not args.non_recursive)
 
+        db.deinit_generation(gen)
         db.commit()
 
     except KeyboardInterrupt:
