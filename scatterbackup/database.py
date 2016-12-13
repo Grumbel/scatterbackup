@@ -33,10 +33,10 @@ def path_iter(path):
 
 
 def generation_from_row(row):
-    if len(row) != 3:
+    if len(row) != 4:
         raise Exception("generation_from_row: to many columns: {}".format(row))
     else:
-        return Generation(row[0], row[1], row[2])
+        return Generation(row[0], row[1], row[2], row[3])
 
 
 def fileinfo_from_row(row):
@@ -559,13 +559,28 @@ class Database:
         if group != []:
             yield group
 
-    def get_generations(self, start, end):
+    def get_generations(self, start=None, end=None):
         cur = self.con.cursor()
+
+        if start is not None and end is not None:
+            condition = "WHERE ? <= id AND id < ?"
+            bindings = [start, end]
+        elif start is not None and end is None:
+            condition = "WHERE ? < id"
+            bindings = [start]
+        elif start is None and end is not None:
+            condition = "WHERE id >= ?"
+            bindings = [end]
+        else:
+            condition = ""
+            bindings = []
+
         cur.execute(
-            ("SELECT * "
-             "FROM generation "
-             "WHERE id <= ? AND ? < id"),
-            [start, end])
+            "SELECT * "
+            "FROM generation "
+            + condition,
+            bindings)
+
         return [generation_from_row(row) for row in cur]
 
     def fsck(self):

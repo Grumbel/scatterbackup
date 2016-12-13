@@ -17,10 +17,11 @@
 
 class Generation:
 
-    def __init__(self, identifier, command, time):
-        self.identifier = identifier
+    def __init__(self, generation, start_time, end_time, command):
+        self.generation = generation
+        self.start_time = start_time
+        self.end_time = end_time
         self.command = command
-        self.time = time
 
 
 # EOF #
