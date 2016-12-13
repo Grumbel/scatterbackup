@@ -200,34 +200,6 @@ class Database:
 
         self.con.create_function("py_dirname", 1, py_dirname)
 
-        if False:
-            print("STARTING CONVERT")
-            print("creating directory table")
-            cur.execute(
-                "INSERT OR IGNORE INTO directory "
-                "SELECT NULL, cast(py_dirname(path) AS TEXT) FROM fileinfo")
-
-        if False:
-            print("making parent_id")
-            cur.execute("INSERT OR IGNORE INTO directory "
-                        "SELECT NULL, cast(py_dirname(path) AS TEXT), id FROM directory")
-            print("making parent_id: done")
-            cur.execute("UPDATE directory "
-                        "SET parent_id = ("
-                        "  SELECT t.id FROM directory AS t "
-                        "  WHERE t.path = cast(py_dirname(directory.path) AS TEXT)) "
-                        "WHERE parent_id IS NULL")
-            print("making parent_id2: done")
-
-        if False:
-            print("updating directory_id in fileinfo")
-            cur.execute(
-                "UPDATE fileinfo "
-                "SET directory_id = ("
-                "  SELECT id FROM directory "
-                "  WHERE directory.path = cast(py_dirname(fileinfo.path) AS TEXT))")
-            print("CONVERT DONE")
-
         cur.execute("CREATE INDEX IF NOT EXISTS fileinfo_index ON fileinfo (path)")
         cur.execute("CREATE INDEX IF NOT EXISTS fileinfo_directory_id_index ON fileinfo (directory_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS fileinfo2_index ON fileinfo (death, path)")
