@@ -19,8 +19,11 @@ import datetime
 
 
 def format_time(t):
-    dt = datetime.datetime.utcfromtimestamp(t / 1000**3)
-    return dt.strftime("%FT%TZ")
+    if t is None:
+        return "     <unknown>      "
+    else:
+        dt = datetime.datetime.utcfromtimestamp(t / 1000**3)
+        return dt.strftime("%FT%TZ")
 
 
 # EOF #
