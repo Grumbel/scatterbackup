@@ -74,10 +74,6 @@ def process_fileinfo_format(fileinfo, fmt):
     print(fmt.format_map(FileInfoFormatter(fileinfo)))
 
 
-def process_fileinfo_regular(fileinfo):
-    print(fileinfo.path)
-
-
 def process_fileinfo(fileinfo, print_fun, context):
     if fileinfo is None:
         print("{}: error: query returned no results".format(context), file=sys.stderr)
@@ -94,12 +90,12 @@ def main():
     # setup output format
     if args.json:
         print_fun = process_fileinfo_json
-    elif args.format is not None:
-        def my_print_fun(fileinfo):
-            process_fileinfo_format(fileinfo, args.format)
-        print_fun = my_print_fun
     else:
-        print_fun = process_fileinfo_regular
+        fmt = args.format or "{mode} {owner:8} {group:8} {size:>8} {time} {path}"
+        def my_print_fun(fileinfo):
+            process_fileinfo_format(fileinfo, fmt)
+
+        print_fun = my_print_fun
 
     # query the database
     if args.PATH == [] and \
