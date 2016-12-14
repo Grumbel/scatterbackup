@@ -278,8 +278,8 @@ class Database:
 
         # print("store...", fileinfo.path)
         cur.execute(
-            ("INSERT INTO fileinfo VALUES"
-             "(NULL, ?, cast(? as TEXT), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"),
+            "INSERT INTO fileinfo VALUES"
+            "(NULL, ?, cast(? as TEXT), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [fileinfo.kind,
              os.fsencode(fileinfo.path),
              fileinfo.dev,
@@ -363,9 +363,9 @@ class Database:
 
             # remove the root node itself
             cur.execute(
-                ("UPDATE fileinfo "
-                 "SET death = ? "
-                 "WHERE fileinfo.id = ?"),
+                "UPDATE fileinfo "
+                "SET death = ? "
+                "WHERE fileinfo.id = ?",
                 [self.current_generation, fileinfo.rowid])
 
     def mark_removed(self, fileinfo):
@@ -374,19 +374,19 @@ class Database:
         else:
             cur = self.con.cursor()
             cur.execute(
-                ("UPDATE fileinfo "
-                 "SET death = ? "
-                 "WHERE fileinfo.id = ?"),
+                "UPDATE fileinfo "
+                "SET death = ? "
+                "WHERE fileinfo.id = ?",
                 [self.current_generation, fileinfo.rowid])
 
     def get_directory_by_path(self, path):
         """Returns the directory given by 'path', does not recurse into the directory"""
         cur = self.con.cursor()
         cur.execute(
-            ("SELECT id "
-             "FROM directory "
-             "WHERE "
-             "  path = cast(? AS TEXT)"),
+            "SELECT id "
+            "FROM directory "
+            "WHERE "
+            "  path = cast(? AS TEXT)",
             [os.fsencode(path)])
         rows = cur.fetchall()
 
@@ -396,13 +396,13 @@ class Database:
             rowid, = rows[0]
 
             cur.execute(
-                ("SELECT * "
-                 "FROM fileinfo "
-                 "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
-                 "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
-                 "WHERE "
-                 "  fileinfo.death is NULL AND "
-                 "  fileinfo.directory_id = ?"),
+                "SELECT * "
+                "FROM fileinfo "
+                "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
+                "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
+                "WHERE "
+                "  fileinfo.death is NULL AND "
+                "  fileinfo.directory_id = ?",
                 [rowid])
 
             return (fileinfo_from_row(row) for row in cur)
@@ -418,14 +418,14 @@ class Database:
 
         cur = self.con.cursor()
         cur.execute(
-            ("SELECT * "
-             "FROM fileinfo "
-             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
-             "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
-             "WHERE "
-             + gen_limit_stmt +
-             "  path = cast(? as TEXT)"
-             "ORDER BY birth ASC"),
+            "SELECT * "
+            "FROM fileinfo "
+            "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
+            "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
+            "WHERE "
+            + gen_limit_stmt +
+            "  path = cast(? as TEXT)"
+            "ORDER BY birth ASC",
             [os.fsencode(path)])
         rows = cur.fetchall()
         if len(rows) == 0:
@@ -441,22 +441,22 @@ class Database:
     def get_all(self):
         cur = self.con.cursor()
         cur.execute(
-            ("SELECT * "
-             "FROM fileinfo "
-             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
-             "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "))
+            "SELECT * "
+            "FROM fileinfo "
+            "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
+            "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id ")
         return (fileinfo_from_row(row) for row in cur)
 
     def get_by_glob(self, pattern):
         cur = self.con.cursor()
         cur.execute(
-            ("SELECT * "
-             "FROM fileinfo "
-             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
-             "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
-             "WHERE "
-             "  fileinfo.death is NULL AND "
-             "  path glob cast(? as TEXT)"),
+            "SELECT * "
+            "FROM fileinfo "
+            "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
+            "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
+            "WHERE "
+            "  fileinfo.death is NULL AND "
+            "  path glob cast(? as TEXT)",
             [os.fsencode(pattern)])
         return (fileinfo_from_row(row) for row in cur)
 
@@ -570,32 +570,32 @@ class Database:
         # check for path that have multiple alive FileInfo associated with them
         cur = self.con.cursor()
         cur.execute(
-            ("SELECT * "
-             "FROM ( "
-             "  SELECT * "
-             "  FROM fileinfo "
-             "  WHERE death is NULL "
-             "  ) AS birth "
-             "GROUP BY path "
-             "HAVING COUNT(*) > 1"))
+            "SELECT * "
+            "FROM ( "
+            "  SELECT * "
+            "  FROM fileinfo "
+            "  WHERE death is NULL "
+            "  ) AS birth "
+            "GROUP BY path "
+            "HAVING COUNT(*) > 1")
         for row in cur:
             fileinfo = fileinfo_from_row(row)
             print("error: double-alive: {}".format(fileinfo.path))
 
         # check for FileInfo that have never been born
         cur.execute(
-            ("SELECT * "
-             "FROM fileinfo "
-             "WHERE birth is NULL "))
+            "SELECT * "
+            "FROM fileinfo "
+            "WHERE birth is NULL ")
         for row in cur:
             fileinfo = fileinfo_from_row(row)
             print("error: birth must not be NULL: {}".format(fileinfo.path))
 
         # check for orphaned BlobInfo
         cur.execute(
-            ("SELECT count(*) "
-             "FROM blobinfo "
-             "WHERE fileinfo_id NOT IN (SELECT id from fileinfo)"))
+            "SELECT count(*) "
+            "FROM blobinfo "
+            "WHERE fileinfo_id NOT IN (SELECT id from fileinfo)")
         rows = cur.fetchall()
         if rows[0][0] > 0:
             print("error: {} orphaned BlobInfo".format(rows[0][0]))
@@ -617,20 +617,20 @@ class Database:
         cur = self.con.cursor()
 
         cur.execute(
-            ("SELECT COUNT(*) "
-             "FROM fileinfo "
-             "WHERE death is NULL"))
+            "SELECT COUNT(*) "
+            "FROM fileinfo "
+            "WHERE death is NULL")
         print("{} files in database".format(cur.fetchall()[0][0]))
 
         cur.execute(
-            ("SELECT COUNT(*) "
-             "FROM fileinfo "
-             "WHERE death IS NOT NULL"))
+            "SELECT COUNT(*) "
+            "FROM fileinfo "
+            "WHERE death IS NOT NULL")
         print("{} dead files in database".format(cur.fetchall()[0][0]))
 
         cur.execute(
-            ("SELECT COUNT(*) "
-             "FROM directory"))
+            "SELECT COUNT(*) "
+            "FROM directory")
         print("{} directories in database".format(cur.fetchall()[0][0]))
 
     def dump(self):
