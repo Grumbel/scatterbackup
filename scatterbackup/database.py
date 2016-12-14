@@ -205,8 +205,12 @@ class Database:
         cur.execute("CREATE INDEX IF NOT EXISTS fileinfo_index ON fileinfo (path)")
         cur.execute("CREATE INDEX IF NOT EXISTS fileinfo_directory_id_index ON fileinfo (directory_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS fileinfo2_index ON fileinfo (death, path)")
+        cur.execute("CREATE INDEX IF NOT EXISTS fileinfo_death_index ON fileinfo (death)")
+        cur.execute("CREATE INDEX IF NOT EXISTS fileinfo_birth_index ON fileinfo (birth)")
+
         cur.execute("CREATE INDEX IF NOT EXISTS directory_path_index ON directory (path)")
         cur.execute("CREATE INDEX IF NOT EXISTS directory_parent_id_index ON directory (parent_id)")
+
         cur.execute("CREATE INDEX IF NOT EXISTS blobinfo_fileinfo_id_index ON blobinfo (fileinfo_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS blobinfo_sha1_index ON blobinfo (sha1)")
         cur.execute("CREATE INDEX IF NOT EXISTS blobinfo_md5_index ON blobinfo (md5)")
@@ -552,6 +556,16 @@ class Database:
 
         if group != []:
             yield group
+
+    def get_generations_range(self):
+        cur = self.con.cursor()
+
+        cur.execute(
+            "SELECT MIN(id), MAX(id) + 1 "
+            "FROM generation")
+
+        rows = cur.fetchall()
+        return GenerationRange(rows[0][0], rows[0][1])
 
     def get_generations(self, grange):
         cur = self.con.cursor()
