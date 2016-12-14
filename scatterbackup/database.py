@@ -23,6 +23,7 @@ import time
 from scatterbackup.generation import Generation, GenerationRange
 from scatterbackup.fileinfo import FileInfo
 from scatterbackup.blobinfo import BlobInfo
+from scatterbackup.sql import WHERE, AND
 
 
 def path_iter(path):
@@ -415,31 +416,26 @@ class Database:
         files as specified by grange"""
         args = []
         if grange is None:
-            gen_limit_stmt = "  fileinfo.death is NULL AND "
+            grange_stmts = ["fileinfo.death is NULL"]
         else:
-            grange_stmt = []
+            grange_stmts = []
             if grange.start is not None:
-                grange_stmt.append("(fileinfo.death >= ?)")
+                grange_stmts.append("fileinfo.death >= ?")
                 args.append(grange.start)
 
             if grange.end is not None:
-                grange_stmt.append("(fileinfo.birth < ?)")
+                grange_stmts.append("fileinfo.birth < ?")
                 args.append(grange.end)
-
-            if grange_stmt != []:
-                gen_limit_stmt = "(" + "AND".join(grange_stmt) + ") AND "
-            else:
-                gen_limit_stmt = ""
 
         cur = self.con.cursor()
         cur.execute(
             "SELECT * "
             "FROM fileinfo "
             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
-            "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
-            "WHERE "
-            + gen_limit_stmt +
-            "  path = cast(? as TEXT)"
+            "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id " +
+            WHERE(
+                AND(*grange_stmts,
+                    "path = cast(? as TEXT)")) +
             "ORDER BY birth ASC",
             args + [os.fsencode(path)])
         rows = cur.fetchall()
@@ -561,13 +557,13 @@ class Database:
         cur = self.con.cursor()
 
         if grange.start is not None and grange.end is not None:
-            condition = "WHERE ? <= id AND id < ?"
+            condition = "? <= id AND id < ?"
             bindings = [grange.start, grange.end]
         elif grange.start is not None and grange.end is None:
-            condition = "WHERE ? < id"
+            condition = "? < id"
             bindings = [grange.start]
         elif grange.start is None and grange.end is not None:
-            condition = "WHERE id >= ?"
+            condition = "id >= ?"
             bindings = [grange.end]
         else:
             condition = ""
@@ -575,8 +571,8 @@ class Database:
 
         cur.execute(
             "SELECT * "
-            "FROM generation "
-            + condition,
+            "FROM generation " +
+            WHERE(condition),
             bindings)
 
         return [generation_from_row(row) for row in cur]
