@@ -47,12 +47,15 @@ class GenerationRange:
                     m = re.match(r"^:([0-9]+)$", text)
                     if m:
                         end, = m.groups()
-                        start = "1"
+                        start = None
                     else:
                         m = re.match(r"^([0-9]+)$", text)
                         if m:
                             start, = m.groups()
                             end = str(int(start) + 1)
+                        elif text == ":":
+                            start = None
+                            end = None
                         else:
                             raise Exception("invalid generation string: {}".format(text))
 
@@ -68,6 +71,15 @@ class GenerationRange:
         self.start = start
         self.end = end
 
+    def __eq__(self, rhs):
+        return (self.start == rhs.start and
+                self.end == rhs.end)
+
+    def __str__(self):
+        return "{}:{}".format(self.start, self.end)
+
+    def __repr__(self):
+        return "GenerationRange({}:{})".format(self.start, self.end)
 
 GenerationRange.MATCH_ALL = GenerationRange(None, None)
 
