@@ -189,39 +189,70 @@ class FileInfoFormatter:
         # FIXME: potential security hole
         return self.__getattribute__(key)()
 
-    def path(self): return self.fileinfo.path
+    def path(self):
+        return self.fileinfo.path
 
-    def dev(self): return self.fileinfo.dev
-    def ino(self): return self.fileinfo.ino
+    def dev(self):
+        return self.fileinfo.dev
 
-    def mode(self): return Mode(self.fileinfo.mode)
-    def nlink(self): return self.fileinfo.nlink
+    def ino(self):
+        return self.fileinfo.ino
 
-    def uid(self): return self.fileinfo.uid
-    def gid(self): return self.fileinfo.gid
+    def mode(self):
+        return Mode(self.fileinfo.mode)
 
-    def owner(self): return getpwuid(self.fileinfo.uid).pw_name  # FIXME: maybe cache this?
-    def group(self): return getgrgid(self.fileinfo.gid).gr_name  # FIXME: maybe cache this?
+    def nlink(self):
+        return self.fileinfo.nlink
 
-    def rdev(self): return self.fileinfo.rdev
+    def uid(self):
+        return self.fileinfo.uid
 
-    def size(self): return Bytes(self.fileinfo.size)
-    def blksize(self): return self.fileinfo.blksize
-    def blocks(self): return self.fileinfo.blocks
+    def gid(self):
+        return self.fileinfo.gid
 
-    def atime(self): return Time(self.fileinfo.atime)
-    def ctime(self): return Time(self.fileinfo.ctime)
-    def mtime(self): return Time(self.fileinfo.mtime)
+    def owner(self):
+        return getpwuid(self.fileinfo.uid).pw_name  # FIXME: maybe cache this?
+
+    def group(self):
+        return getgrgid(self.fileinfo.gid).gr_name  # FIXME: maybe cache this?
+
+    def rdev(self):
+        return self.fileinfo.rdev
+
+    def size(self):
+        return Bytes(self.fileinfo.size)
+
+    def blksize(self):
+        return self.fileinfo.blksize
+
+    def blocks(self):
+        return self.fileinfo.blocks
+
+    def atime(self):
+        return Time(self.fileinfo.atime)
+
+    def ctime(self):
+        return Time(self.fileinfo.ctime)
+
+    def mtime(self):
+        return Time(self.fileinfo.mtime)
 
     def time(self): return Time(self.fileinfo.time)
 
-    def birth(self): return self.fileinfo.birth
-    def death(self): return self.fileinfo.death
+    def birth(self):
+        return self.fileinfo.birth
 
-    def sha1(self): return Checksum(self.fileinfo.blob.sha1 if self.fileinfo.blob else "<sha1:unknown>")
-    def md5(self): return Checksum(self.fileinfo.blob.md5 if self.fileinfo.blob else "<md5:unknown>")
+    def death(self):
+        return self.fileinfo.death
 
-    def target(self): return self.fileinfo.target
+    def sha1(self):
+        return Checksum(self.fileinfo.blob.sha1 if self.fileinfo.blob else "<sha1:unknown>")
+
+    def md5(self):
+        return Checksum(self.fileinfo.blob.md5 if self.fileinfo.blob else "<md5:unknown>")
+
+    def target(self):
+        return self.fileinfo.target
 
 
 # EOF #

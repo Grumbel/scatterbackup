@@ -92,6 +92,7 @@ def main():
         print_fun = process_fileinfo_json
     else:
         fmt = args.format or "{mode} {owner:8} {group:8} {size:>8} {time} {path}"
+
         def my_print_fun(fileinfo):
             process_fileinfo_format(fileinfo, fmt)
 
