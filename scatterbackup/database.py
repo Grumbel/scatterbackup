@@ -20,7 +20,7 @@ import sys
 import sqlite3
 import time
 
-from scatterbackup.generation import Generation
+from scatterbackup.generation import Generation, GenerationRange
 from scatterbackup.fileinfo import FileInfo
 from scatterbackup.blobinfo import BlobInfo
 
@@ -408,13 +408,28 @@ class Database:
             return (fileinfo_from_row(row) for row in cur)
 
     def get_by_path_many(self, path):
-        return self.get_by_path(path, all_matches=True)
+        return self.get_by_path(path, GenerationRange.MATCH_ALL)
 
-    def get_by_path(self, path, all_matches=False):
-        if all_matches:
-            gen_limit_stmt = ""
-        else:
+    def get_by_path(self, path, grange=None):
+        """When grange is None, return only the active file, otherwise return
+        files as specified by grange"""
+        args = []
+        if grange is None:
             gen_limit_stmt = "  fileinfo.death is NULL AND "
+        else:
+            grange_stmt = []
+            if grange.start is not None:
+                grange_stmt.append("(fileinfo.death >= ?)")
+                args.append(grange.start)
+
+            if grange.end is not None:
+                grange_stmt.append("(fileinfo.birth < ?)")
+                args.append(grange.end)
+
+            if grange_stmt != []:
+                gen_limit_stmt = "(" + "AND".join(grange_stmt) + ") AND "
+            else:
+                gen_limit_stmt = ""
 
         cur = self.con.cursor()
         cur.execute(
@@ -426,12 +441,12 @@ class Database:
             + gen_limit_stmt +
             "  path = cast(? as TEXT)"
             "ORDER BY birth ASC",
-            [os.fsencode(path)])
+            args + [os.fsencode(path)])
         rows = cur.fetchall()
         if len(rows) == 0:
             return None
         else:
-            if all_matches:
+            if grange is not None:
                 return [fileinfo_from_row(row) for row in rows]
             else:
                 row = rows[-1]
@@ -542,18 +557,18 @@ class Database:
         if group != []:
             yield group
 
-    def get_generations(self, start=None, end=None):
+    def get_generations(self, grange):
         cur = self.con.cursor()
 
-        if start is not None and end is not None:
+        if grange.start is not None and grange.end is not None:
             condition = "WHERE ? <= id AND id < ?"
-            bindings = [start, end]
-        elif start is not None and end is None:
+            bindings = [grange.start, grange.end]
+        elif grange.start is not None and grange.end is None:
             condition = "WHERE ? < id"
-            bindings = [start]
-        elif start is None and end is not None:
+            bindings = [grange.start]
+        elif grange.start is None and grange.end is not None:
             condition = "WHERE id >= ?"
-            bindings = [end]
+            bindings = [grange.end]
         else:
             condition = ""
             bindings = []

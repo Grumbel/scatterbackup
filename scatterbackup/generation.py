@@ -15,6 +15,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import re
+
+
 class Generation:
 
     def __init__(self, generation, start_time, end_time, command):
@@ -22,6 +25,51 @@ class Generation:
         self.start_time = start_time
         self.end_time = end_time
         self.command = command
+
+
+class GenerationRange:
+
+    @staticmethod
+    def from_string(text):
+        start = None
+        end = None
+
+        if text:
+            text = text.strip()
+            m = re.match(r"^([0-9]+):([0-9]+)$", text)
+            if m:
+                start, end = m.groups()
+            else:
+                m = re.match(r"^([0-9]+):$", text)
+                if m:
+                    start, = m.groups()
+                else:
+                    m = re.match(r"^:([0-9]+)$", text)
+                    if m:
+                        end, = m.groups()
+                        start = "1"
+                    else:
+                        m = re.match(r"^([0-9]+)$", text)
+                        if m:
+                            start, = m.groups()
+                            end = str(int(start) + 1)
+                        else:
+                            raise Exception("invalid generation string: {}".format(text))
+
+            start = int(start) if start else None
+            end = int(end) if end else None
+
+            if start is not None and end is not None and start >= end:
+                raise Exception("invalid generation range: {}-{}".format(start, end))
+
+        return GenerationRange(start, end)
+
+    def __init__(self, start, end):
+        self.start = start
+        self.end = end
+
+
+GenerationRange.MATCH_ALL = GenerationRange(None, None)
 
 
 # EOF #

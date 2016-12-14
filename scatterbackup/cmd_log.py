@@ -16,9 +16,9 @@
 
 
 import os
-import re
 import argparse
 import datetime
+
 import scatterbackup.util
 import scatterbackup.config
 import scatterbackup.database
@@ -26,6 +26,7 @@ import scatterbackup.time
 from scatterbackup.time import format_time
 from scatterbackup.util import sb_init
 from scatterbackup.units import bytes2human_decimal
+from scatterbackup.generation import GenerationRange
 
 
 def parse_args():
@@ -47,10 +48,10 @@ def parse_args():
     return parser.parse_args()
 
 
-def process_path(db, args):
+def process_path(db, args, gen_range):
     for path in args.PATH:
         path = os.path.abspath(path)
-        fileinfos = db.get_by_path(path, all_matches=True)
+        fileinfos = db.get_by_path(path, gen_range)
         if fileinfos is None:
             print("{}: error: path not found".format(path))
         else:
@@ -67,8 +68,8 @@ def process_path(db, args):
                               fileinfo.path))
 
 
-def print_generations(db, args, start, end):
-    generations = db.get_generations(start, end)
+def print_generations(db, args, gen_range):
+    generations = db.get_generations(gen_range)
     for gen in generations:
         print("{}  {}  {}  {}  {}".format(gen.generation,
                                           format_time(gen.start_time),
@@ -77,41 +78,6 @@ def print_generations(db, args, start, end):
                                            if gen.start_time is not None and gen.end_time is not None
                                            else "  <unknown>   "),
                                           gen.command))
-
-
-def parse_generation(text):
-    start = None
-    end = None
-
-    if text:
-        text = text.strip()
-        m = re.match(r"^([0-9]+):([0-9]+)$", text)
-        if m:
-            start, end = m.groups()
-        else:
-            m = re.match(r"^([0-9]+):$", text)
-            if m:
-                start, = m.groups()
-            else:
-                m = re.match(r"^:([0-9]+)$", text)
-                if m:
-                    end, = m.groups()
-                    start = "1"
-                else:
-                    m = re.match(r"^([0-9]+)$", text)
-                    if m:
-                        start, = m.groups()
-                        end = str(int(start) + 1)
-                    else:
-                        raise Exception("invalid generation string: {}".format(text))
-
-        start = int(start) if start else None
-        end = int(end) if end else None
-
-        if start is not None and end is not None and start >= end:
-            raise Exception("invalid generation range: {}-{}".format(start, end))
-
-    return (start, end)
 
 
 def main():
@@ -124,11 +90,12 @@ def main():
 
     db = scatterbackup.database.Database(args.database or scatterbackup.util.make_default_database())
 
+    gen_range = GenerationRange.from_string(args.generation)
+
     if args.PATH == []:
-        start, end = parse_generation(args.generation)
-        print_generations(db, args, start, end)
+        print_generations(db, args, gen_range)
     else:
-        process_path(db, args)
+        process_path(db, args, gen_range)
 
 
 # EOF #

@@ -19,8 +19,10 @@
 
 import os
 import unittest
+
 from scatterbackup.database import Database
 from scatterbackup.fileinfo import FileInfo
+from scatterbackup.generation import GenerationRange
 
 
 class DatabaseTestCase(unittest.TestCase):
@@ -66,7 +68,7 @@ class DatabaseTestCase(unittest.TestCase):
         self.assertEqual(len(results), 3)
 
     def test_get_generation(self):
-        gens = self.db.get_generations(0, 100)
+        gens = self.db.get_generations(GenerationRange(0, 100))
         self.assertEqual(len(gens), 0)
 
 
