@@ -71,6 +71,17 @@ class GenerationRange:
         self.start = start
         self.end = end
 
+    def clip_to(self, grange):
+        if self.start is None:
+            self.start = grange.start
+        else:
+            self.start = max(self.start, grange.start)
+
+        if self.end is None:
+            self.end = grange.end
+        else:
+            self.end = min(self.end, grange.end)
+
     def __eq__(self, rhs):
         return (self.start == rhs.start and
                 self.end == rhs.end)
