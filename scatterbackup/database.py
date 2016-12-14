@@ -379,23 +379,6 @@ class Database:
                  "WHERE fileinfo.id = ?"),
                 [self.current_generation, fileinfo.rowid])
 
-    def get_directory_by_path2(self, path):
-        path_glob = os.path.join(path, "*")
-        path_not_glob = os.path.join(path, "*", "*")
-
-        cur = self.con.cursor()
-        cur.execute(
-            ("SELECT * "
-             "FROM fileinfo "
-             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
-             "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
-             "WHERE "
-             "  path GLOB cast(? AS TEXT) AND "
-             "  path NOT GLOB cast(? AS TEXT) AND"
-             "  fileinfo.death is NULL "),
-            [os.fsencode(path_glob), os.fsencode(path_not_glob)])
-        return (fileinfo_from_row(row) for row in cur)
-
     def get_directory_by_path(self, path):
         """Returns the directory given by 'path', does not recurse into the directory"""
         cur = self.con.cursor()
