@@ -15,6 +15,18 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+def sql_pretty_print(text):
+    keywords = ["FROM",
+                "LEFT JOIN",
+                "INNER JOIN",
+                "WHERE",
+                "GROUP BY",
+                "ORDER BY"]
+    for keyword in keywords:
+        text = text.replace(keyword, "\n" + keyword)
+    print(text)
+
+
 def WHERE(stmt):
     if stmt:
         return "WHERE " + stmt
