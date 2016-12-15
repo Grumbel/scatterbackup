@@ -50,8 +50,8 @@ def parse_args():
     return parser.parse_args()
 
 
-def process_path(db, args, path, gen_range):
-    path_glob = os.path.join(os.path.abspath(path), "*")
+def process_path(db, args, paths, gen_range):
+    path_globs = [os.path.join(os.path.abspath(path), "*") for path in paths]
 
     dbrange = db.get_generations_range()
     gen_range.clip_to(dbrange)
@@ -61,10 +61,10 @@ def process_path(db, args, path, gen_range):
 
         generation = db.get_generations(grange)[0]
 
-        fileinfos = db.get_by_glob(path_glob, grange)
+        fileinfos = db.get_by_glob(path_globs, grange)
 
         group_by_path = defaultdict(list)
-        for f in fileinfos:
+        for f in (j for j in fileinfos if j.kind != "directory"):
             group_by_path[f.path].append(f)
 
         if group_by_path == {}:
@@ -78,9 +78,6 @@ def process_path(db, args, path, gen_range):
 
             for p, group in group_by_path.items():
                 fileinfo = group[-1]
-
-                if fileinfo.kind == "directory":
-                    continue
 
                 if len(group) > 1:
                     status = "changed"
@@ -129,8 +126,7 @@ def main():
     if args.PATH == []:
         print_generations(db, args, gen_range)
     else:
-        for path in args.PATH:
-            process_path(db, args, path, gen_range)
+        process_path(db, args, args.PATH, gen_range)
 
 
 # EOF #
