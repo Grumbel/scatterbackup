@@ -493,9 +493,20 @@ class Database:
 
         return cur.execute(sql, args)
 
-    def get_by_glob(self, pattern, grange=None):
-        args = []
-        grange_stmt = grange_to_sql(grange, args)
+    def get_by_glob(self, patterns, grange=None):
+        patterns = patterns if type(patterns) is list else [patterns]
+
+        grange_args = []
+        grange_stmt = grange_to_sql(grange, grange_args)
+
+        glob_args = []
+        glob_stmt = []
+
+        for pattern in patterns:
+            glob_args.append(os.fsencode(pattern))
+            glob_stmt.append("path glob cast(? as TEXT)")
+
+        glob_stmt = OR(*glob_stmt)
 
         cur = self.execute(
             "SELECT * "
@@ -503,9 +514,8 @@ class Database:
             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
             "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id " +
             WHERE(
-                AND(grange_stmt,
-                    "path glob cast(? as TEXT)")),
-            args + [os.fsencode(pattern)])
+                AND(grange_stmt, glob_stmt)),
+            grange_args + glob_args)
 
         return (fileinfo_from_row(row) for row in cur)
 
