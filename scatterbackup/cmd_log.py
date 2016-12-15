@@ -18,6 +18,7 @@
 import os
 import argparse
 import datetime
+from collections import defaultdict
 
 import scatterbackup.util
 import scatterbackup.config
@@ -27,6 +28,7 @@ from scatterbackup.time import format_time
 from scatterbackup.util import sb_init
 from scatterbackup.units import bytes2human_decimal
 from scatterbackup.generation import GenerationRange
+from scatterbackup.format import Time
 
 
 def parse_args():
@@ -48,21 +50,53 @@ def parse_args():
     return parser.parse_args()
 
 
-def process_path(db, args, gen_range):
-    for path in args.PATH:
-        path = os.path.abspath(path)
-        fileinfos = db.get_by_path(path, gen_range)
-        if fileinfos is None:
-            print("{}: error: path not found".format(path))
-        else:
-            fileinfos = sorted(fileinfos, key=lambda fileinfo: fileinfo.birth)
+def process_path(db, args, path, gen_range):
+    path_glob = os.path.join(os.path.abspath(path), "*")
 
-            for fileinfo in fileinfos:
-                print("{:18} {!r:>5}  {!r:>5}  {!r:>10}  {:>10}  {}  {}"
-                      .format(scatterbackup.time.format_time(fileinfo.time),
-                              fileinfo.birth,
-                              fileinfo.death,
-                              fileinfo.ino,
+    dbrange = db.get_generations_range()
+    gen_range.clip_to(dbrange)
+
+    for gen in range(gen_range.start, gen_range.end):
+        grange = GenerationRange(gen, gen+1, GenerationRange.INCLUDE_CHANGED)
+
+        generation = db.get_generations(grange)[0]
+
+        fileinfos = db.get_by_glob(path_glob, grange)
+
+        group_by_path = defaultdict(list)
+        for f in fileinfos:
+            group_by_path[f.path].append(f)
+
+        if group_by_path == {}:
+            pass
+        else:
+            print("\n-- generation {}: [{} - {}] - {}"
+                  .format(gen,
+                          Time(generation.start_time),
+                          Time(generation.end_time),
+                          generation.command))
+
+            for p, group in group_by_path.items():
+                fileinfo = group[-1]
+
+                if fileinfo.kind == "directory":
+                    continue
+
+                if len(group) > 1:
+                    status = "changed"
+                elif fileinfo.birth == gen:
+                    status = "added"
+                elif fileinfo.death == gen:
+                    status = "deleted"
+
+                # TODO: make summary of changes:
+                # compare(group[0], group[1])
+
+                # TODO: insert rename detection
+
+                print("{:8} {:>10}  {}  {}"
+                      .format(status,
+                              # fileinfo.ino,
                               bytes2human_decimal(fileinfo.size),
                               fileinfo.blob and fileinfo.blob.sha1,
                               fileinfo.path))
@@ -95,7 +129,8 @@ def main():
     if args.PATH == []:
         print_generations(db, args, gen_range)
     else:
-        process_path(db, args, gen_range)
+        for path in args.PATH:
+            process_path(db, args, path, gen_range)
 
 
 # EOF #

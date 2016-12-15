@@ -23,7 +23,7 @@ import time
 from scatterbackup.generation import Generation, GenerationRange
 from scatterbackup.fileinfo import FileInfo
 from scatterbackup.blobinfo import BlobInfo
-from scatterbackup.sql import WHERE, AND
+from scatterbackup.sql import WHERE, AND, OR, sql_pretty_print
 
 
 def path_iter(path):
@@ -31,6 +31,37 @@ def path_iter(path):
     while path != "/":
         path = os.path.dirname(path)
         yield path
+
+
+def grange_to_sql(grange, args):
+    if grange is None:
+        grange_stmt = "fileinfo.death is NULL"
+    elif grange.include_rule == GenerationRange.INCLUDE_ALIVE:
+        grange_stmt = []
+        if grange.start is not None:
+            grange_stmt.append("fileinfo.death >= ?")
+            args.append(grange.start)
+
+        if grange.end is not None:
+            grange_stmt.append("fileinfo.birth < ?")
+            args.append(grange.end)
+
+        grange_stmt = AND(*grange_stmt)
+    elif grange.include_rule == GenerationRange.INCLUDE_CHANGED:
+        grange_stmt = []
+        if grange.start is not None:
+            grange_stmt.append("? <= fileinfo.birth AND fileinfo.birth < ?")
+            args += [grange.start, grange.end]
+
+        if grange.end is not None:
+            grange_stmt.append("? <= fileinfo.death AND fileinfo.death < ?")
+            args += [grange.start, grange.end]
+
+        grange_stmt = OR(*grange_stmt)
+    else:
+        raise Exception("invalid include_rule in GenerationRange")
+
+    return grange_stmt
 
 
 def generation_from_row(row):
@@ -419,17 +450,7 @@ class Database:
         """When grange is None, return only the active file, otherwise return
         files as specified by grange"""
         args = []
-        if grange is None:
-            grange_stmts = ["fileinfo.death is NULL"]
-        else:
-            grange_stmts = []
-            if grange.start is not None:
-                grange_stmts.append("fileinfo.death >= ?")
-                args.append(grange.start)
-
-            if grange.end is not None:
-                grange_stmts.append("fileinfo.birth < ?")
-                args.append(grange.end)
+        grange_stmt = grange_to_sql(grange, args)
 
         cur = self.con.cursor()
         cur.execute(
@@ -438,7 +459,7 @@ class Database:
             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
             "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id " +
             WHERE(
-                AND(*grange_stmts,
+                AND(grange_stmt,
                     "path = cast(? as TEXT)")) +
             "ORDER BY birth ASC",
             args + [os.fsencode(path)])
@@ -462,17 +483,30 @@ class Database:
             "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id ")
         return (fileinfo_from_row(row) for row in cur)
 
-    def get_by_glob(self, pattern):
+    def execute(self, sql, args=[]):
         cur = self.con.cursor()
-        cur.execute(
+
+        if False:
+            print("SQL:")
+            sql_pretty_print(sql)
+            print("ARGS: {}".format(args))
+
+        return cur.execute(sql, args)
+
+    def get_by_glob(self, pattern, grange=None):
+        args = []
+        grange_stmt = grange_to_sql(grange, args)
+
+        cur = self.execute(
             "SELECT * "
             "FROM fileinfo "
             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
-            "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
-            "WHERE "
-            "  fileinfo.death is NULL AND "
-            "  path glob cast(? as TEXT)",
-            [os.fsencode(pattern)])
+            "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id " +
+            WHERE(
+                AND(grange_stmt,
+                    "path glob cast(? as TEXT)")),
+            args + [os.fsencode(pattern)])
+
         return (fileinfo_from_row(row) for row in cur)
 
     def get_by_checksum(self, checksum_type, checksum):

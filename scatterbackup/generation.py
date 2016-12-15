@@ -29,6 +29,9 @@ class Generation:
 
 class GenerationRange:
 
+    INCLUDE_ALIVE = 1
+    INCLUDE_CHANGED = 2
+
     @staticmethod
     def from_string(text):
         start = None
@@ -67,9 +70,10 @@ class GenerationRange:
 
         return GenerationRange(start, end)
 
-    def __init__(self, start, end):
+    def __init__(self, start, end, include_rule=INCLUDE_ALIVE):
         self.start = start
         self.end = end
+        self.include_rule = include_rule
 
     def clip_to(self, grange):
         if self.start is None:
