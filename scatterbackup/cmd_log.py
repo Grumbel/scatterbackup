@@ -121,7 +121,8 @@ def main():
 
     db = scatterbackup.database.Database(args.database or scatterbackup.util.make_default_database())
 
-    gen_range = GenerationRange.from_string(args.generation)
+    dbrange = db.get_generations_range()
+    gen_range = GenerationRange.from_string(args.generation, dbrange)
 
     if args.PATH == []:
         print_generations(db, args, gen_range)

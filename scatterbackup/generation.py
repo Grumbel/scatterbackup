@@ -33,26 +33,26 @@ class GenerationRange:
     INCLUDE_CHANGED = 2
 
     @staticmethod
-    def from_string(text):
+    def from_string(text, dbrange=None):
         start = None
         end = None
 
         if text:
             text = text.strip()
-            m = re.match(r"^([0-9]+):([0-9]+)$", text)
+            m = re.match(r"^(-?[0-9]+):(-?[0-9]+)$", text)
             if m:
                 start, end = m.groups()
             else:
-                m = re.match(r"^([0-9]+):$", text)
+                m = re.match(r"^(-?[0-9]+):$", text)
                 if m:
                     start, = m.groups()
                 else:
-                    m = re.match(r"^:([0-9]+)$", text)
+                    m = re.match(r"^:(-?[0-9]+)$", text)
                     if m:
                         end, = m.groups()
                         start = None
                     else:
-                        m = re.match(r"^([0-9]+)$", text)
+                        m = re.match(r"^(-?[0-9]+)$", text)
                         if m:
                             start, = m.groups()
                             end = str(int(start) + 1)
@@ -67,6 +67,13 @@ class GenerationRange:
 
             if start is not None and end is not None and start >= end:
                 raise Exception("invalid generation range: {}-{}".format(start, end))
+
+        if dbrange is not None:
+            if start is not None and start < 0:
+                start = dbrange.end + start
+
+            if end is not None and end < 0:
+                end = dbrange.end + end
 
         return GenerationRange(start, end)
 
