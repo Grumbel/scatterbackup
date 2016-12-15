@@ -144,11 +144,11 @@ class Database:
 
         self.current_generation = None
 
+        self.cur = self.con.cursor()
         self.init_tables()
 
     def init_tables(self):
-        cur = self.con.cursor()
-        cur.execute(
+        self.execute(
             "CREATE TABLE IF NOT EXISTS fileinfo("
             "id INTEGER PRIMARY KEY, "
             # "storage_id INTEGER, "
@@ -183,7 +183,7 @@ class Database:
             "directory_id INTEGER"
             ")")
 
-        cur.execute(
+        self.execute(
             "CREATE TABLE IF NOT EXISTS blobinfo("
             "id INTEGER PRIMARY KEY, "
             "fileinfo_id INTEGER, "
@@ -192,27 +192,27 @@ class Database:
             "sha1 TEXT"
             ")")
 
-        cur.execute(
+        self.execute(
             "CREATE TABLE IF NOT EXISTS directory("
             "id INTEGER PRIMARY KEY, "
             "path TEXT UNIQUE, "
             "parent_id INTEGER"
             ")")
 
-        cur.execute(
+        self.execute(
             "CREATE TABLE IF NOT EXISTS linkinfo("
             "id INTEGER PRIMARY KEY, "
             "fileinfo_id INTEGER, "
             "target TEXT "
             ")")
 
-        cur.execute(
+        self.execute(
             "CREATE TABLE IF NOT EXISTS storageinfo("
             "id INTEGER PRIMARY KEY, "
             "name TEXT"
             ")")
 
-        cur.execute(
+        self.execute(
             "CREATE TABLE IF NOT EXISTS generation("
             "id INTEGER PRIMARY KEY, "
             "start INTEGER, "
@@ -233,76 +233,76 @@ class Database:
 
         self.con.create_function("py_dirname", 1, py_dirname)
 
-        cur.execute("CREATE INDEX IF NOT EXISTS fileinfo_index ON fileinfo (path)")
-        cur.execute("CREATE INDEX IF NOT EXISTS fileinfo_directory_id_index ON fileinfo (directory_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS fileinfo2_index ON fileinfo (death, path)")
-        cur.execute("CREATE INDEX IF NOT EXISTS fileinfo_death_index ON fileinfo (death)")
-        cur.execute("CREATE INDEX IF NOT EXISTS fileinfo_birth_index ON fileinfo (birth)")
+        self.execute("CREATE INDEX IF NOT EXISTS fileinfo_index ON fileinfo (path)")
+        self.execute("CREATE INDEX IF NOT EXISTS fileinfo_directory_id_index ON fileinfo (directory_id)")
+        self.execute("CREATE INDEX IF NOT EXISTS fileinfo2_index ON fileinfo (death, path)")
+        self.execute("CREATE INDEX IF NOT EXISTS fileinfo_death_index ON fileinfo (death)")
+        self.execute("CREATE INDEX IF NOT EXISTS fileinfo_birth_index ON fileinfo (birth)")
 
-        cur.execute("CREATE INDEX IF NOT EXISTS directory_path_index ON directory (path)")
-        cur.execute("CREATE INDEX IF NOT EXISTS directory_parent_id_index ON directory (parent_id)")
+        self.execute("CREATE INDEX IF NOT EXISTS directory_path_index ON directory (path)")
+        self.execute("CREATE INDEX IF NOT EXISTS directory_parent_id_index ON directory (parent_id)")
 
-        cur.execute("CREATE INDEX IF NOT EXISTS blobinfo_fileinfo_id_index ON blobinfo (fileinfo_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS blobinfo_sha1_index ON blobinfo (sha1)")
-        cur.execute("CREATE INDEX IF NOT EXISTS blobinfo_md5_index ON blobinfo (md5)")
+        self.execute("CREATE INDEX IF NOT EXISTS blobinfo_fileinfo_id_index ON blobinfo (fileinfo_id)")
+        self.execute("CREATE INDEX IF NOT EXISTS blobinfo_sha1_index ON blobinfo (sha1)")
+        self.execute("CREATE INDEX IF NOT EXISTS blobinfo_md5_index ON blobinfo (md5)")
         self.con.commit()
 
     def init_generation(self, cmd):
-        cur = self.con.cursor()
         current_time = int(round(time.time() * 1000**3))
-        cur.execute("INSERT INTO generation "
-                    "(command, start) "
-                    "VALUES "
-                    "(?, ?)",
-                    [cmd, current_time])
-        self.current_generation = cur.lastrowid
+        self.execute(
+            "INSERT INTO generation "
+            "(command, start) "
+            "VALUES "
+            "(?, ?)",
+            [cmd, current_time])
+        self.current_generation = self.cur.lastrowid
 
         return self.current_generation
 
     def deinit_generation(self, rowid):
-        cur = self.con.cursor()
         current_time = int(round(time.time() * 1000**3))
-        cur.execute("UPDATE generation "
-                    "SET "
-                    "  end = ? "
-                    "WHERE "
-                    "  id = ?",
-                    [current_time, rowid])
+        self.execute(
+            "UPDATE generation "
+            "SET "
+            "  end = ? "
+            "WHERE "
+            "  id = ?",
+            [current_time, rowid])
 
     def store_directory(self, path):
-        cur = self.con.cursor()
-        cur.execute("SELECT id "
-                    "FROM directory "
-                    "WHERE path = cast(? AS TEXT)",
-                    [os.fsencode(path)])
-        rows = cur.fetchall()
+        self.execute(
+            "SELECT id "
+            "FROM directory "
+            "WHERE path = cast(? AS TEXT)",
+            [os.fsencode(path)])
+        rows = self.cur.fetchall()
         if len(rows) == 1:
             return rows[0][0]
         else:
             # create path entries
-            cur.executemany(
+            self.executemany(
                 "INSERT OR IGNORE INTO directory "
                 "VALUES (NULL, cast(? AS TEXT), NULL)",
                 [[os.fsencode(p)] for p in path_iter(path)])
 
             # update parent_ids
-            cur.execute("UPDATE directory "
-                        "SET parent_id = ("
-                        "  SELECT t.id FROM directory AS t "
-                        "  WHERE t.path = directory.path)"
-                        "WHERE parent_id IS NULL")
+            self.execute(
+                "UPDATE directory "
+                "SET parent_id = ("
+                "  SELECT t.id FROM directory AS t "
+                "  WHERE t.path = directory.path)"
+                "WHERE parent_id IS NULL")
 
             # retry to query the directory_id
-            cur.execute("SELECT id "
-                        "FROM directory "
-                        "WHERE path = cast(? AS TEXT)",
-                        [os.fsencode(path)])
-            rows = cur.fetchall()
+            self.execute(
+                "SELECT id "
+                "FROM directory "
+                "WHERE path = cast(? AS TEXT)",
+                [os.fsencode(path)])
+            rows = self.cur.fetchall()
             return rows[0][0]
 
     def store(self, fileinfo):
-        cur = self.con.cursor()
-
         if fileinfo.birth is not None:
             birth = fileinfo.birth
         else:
@@ -313,7 +313,7 @@ class Database:
             fileinfo.directory_id = self.store_directory(dname)
 
         # print("store...", fileinfo.path)
-        cur.execute(
+        self.execute(
             "INSERT INTO fileinfo VALUES"
             "(NULL, ?, cast(? as TEXT), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [fileinfo.kind,
@@ -336,17 +336,19 @@ class Database:
              fileinfo.death,
              fileinfo.directory_id])
 
-        fileinfo_id = cur.lastrowid
+        fileinfo_id = self.cur.lastrowid
 
         if fileinfo.blob is not None:
-            cur.execute("INSERT INTO blobinfo VALUES"
-                        "(NULL, ?, ?, ?, ?)",
-                        (fileinfo_id, fileinfo.blob.size, fileinfo.blob.md5, fileinfo.blob.sha1))
+            self.execute(
+                "INSERT INTO blobinfo VALUES"
+                "(NULL, ?, ?, ?, ?)",
+                (fileinfo_id, fileinfo.blob.size, fileinfo.blob.md5, fileinfo.blob.sha1))
 
         if fileinfo.target is not None:
-            cur.execute("INSERT INTO linkinfo VALUES"
-                        "(NULL, ?, ?)",
-                        (fileinfo_id, fileinfo.target))
+            self.execute(
+                "INSERT INTO linkinfo VALUES"
+                "(NULL, ?, ?)",
+                (fileinfo_id, fileinfo.target))
 
         # auto-commit if certain thresholds are crossed
         self.insert_count += 1
@@ -365,21 +367,20 @@ class Database:
         elif fileinfo.kind != "directory":
             print("mark_removed_recursive: must be a directory", fileinfo.path)
         else:
-            cur = self.con.cursor()
-
             # "WITH RECURSIVE" is *much* faster when we use a plain
             # value in the initial-select instead of this SELECT
             # statement
-            cur.execute("SELECT id FROM directory WHERE path = cast(? AS TEXT)",
-                        [os.fsencode(fileinfo.path)])
-            rows = cur.fetchall()
+            self.execute(
+                "SELECT id FROM directory WHERE path = cast(? AS TEXT)",
+                [os.fsencode(fileinfo.path)])
+            rows = self.cur.fetchall()
             if len(rows) != 1:
                 print("mark_removed_recursive: directory not found: {}".format(fileinfo.path))
             else:
                 root_directory_id = rows[0][0]
 
                 # remove all the children of the root node
-                cur.execute(
+                self.execute(
                     "WITH RECURSIVE "
 
                     # create a list of directory.id that are to be removed
@@ -398,7 +399,7 @@ class Database:
                      self.current_generation])
 
             # remove the root node itself
-            cur.execute(
+            self.execute(
                 "UPDATE fileinfo "
                 "SET death = ? "
                 "WHERE fileinfo.id = ?",
@@ -408,8 +409,7 @@ class Database:
         if fileinfo.rowid is None:
             print("mark_removed: no rowid given", fileinfo.path)
         else:
-            cur = self.con.cursor()
-            cur.execute(
+            self.execute(
                 "UPDATE fileinfo "
                 "SET death = ? "
                 "WHERE fileinfo.id = ?",
@@ -417,21 +417,20 @@ class Database:
 
     def get_directory_by_path(self, path):
         """Returns the directory given by 'path', does not recurse into the directory"""
-        cur = self.con.cursor()
-        cur.execute(
+        self.execute(
             "SELECT id "
             "FROM directory "
             "WHERE "
             "  path = cast(? AS TEXT)",
             [os.fsencode(path)])
-        rows = cur.fetchall()
+        rows = self.cur.fetchall()
 
         if len(rows) != 1:
             return []
         else:
             rowid, = rows[0]
 
-            cur.execute(
+            self.execute(
                 "SELECT * "
                 "FROM fileinfo "
                 "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
@@ -441,7 +440,7 @@ class Database:
                 "  fileinfo.directory_id = ?",
                 [rowid])
 
-            return (fileinfo_from_row(row) for row in cur)
+            return (fileinfo_from_row(row) for row in self.cur)
 
     def get_by_path_many(self, path):
         return self.get_by_path(path, GenerationRange.MATCH_ALL)
@@ -452,8 +451,7 @@ class Database:
         args = []
         grange_stmt = grange_to_sql(grange, args)
 
-        cur = self.con.cursor()
-        cur.execute(
+        self.execute(
             "SELECT * "
             "FROM fileinfo "
             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
@@ -463,7 +461,7 @@ class Database:
                     "path = cast(? as TEXT)")) +
             "ORDER BY birth ASC",
             args + [os.fsencode(path)])
-        rows = cur.fetchall()
+        rows = self.cur.fetchall()
         if len(rows) == 0:
             return None
         else:
@@ -475,23 +473,30 @@ class Database:
                 return fileinfo
 
     def get_all(self):
-        cur = self.con.cursor()
-        cur.execute(
+        self.execute(
             "SELECT * "
             "FROM fileinfo "
             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
             "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id ")
-        return (fileinfo_from_row(row) for row in cur)
+        return (fileinfo_from_row(row) for row in self.cur)
 
     def execute(self, sql, args=[]):
-        cur = self.con.cursor()
-
         if False:
-            print("SQL:")
+            print("SQL-execute:")
             sql_pretty_print(sql)
             print("ARGS: {}".format(args))
 
-        return cur.execute(sql, args)
+        return self.cur.execute(sql, args)
+
+    def executemany(self, sql, args):
+        if False:
+            print("SQL-executemany:")
+            sql_pretty_print(sql)
+            print("ARGS:")
+            for a in args:
+                print("  {}".format(a))
+
+        return self.cur.executemany(sql, args)
 
     def get_by_glob(self, patterns, grange=None):
         patterns = patterns if type(patterns) is list else [patterns]
@@ -508,7 +513,7 @@ class Database:
 
         glob_stmt = OR(*glob_stmt)
 
-        cur = self.execute(
+        self.execute(
             "SELECT * "
             "FROM fileinfo "
             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
@@ -517,11 +522,10 @@ class Database:
                 AND(grange_stmt, glob_stmt)),
             grange_args + glob_args)
 
-        return (fileinfo_from_row(row) for row in cur)
+        return (fileinfo_from_row(row) for row in self.cur)
 
     def get_by_checksum(self, checksum_type, checksum):
-        cur = self.con.cursor()
-        cur.execute(
+        self.execute(
             "WITH "
 
             "matching_fileinfos AS ( "
@@ -538,11 +542,9 @@ class Database:
             "  fileinfo.death is NULL AND "
             "  fileinfo.id in matching_fileinfos".format(checksum_type),
             [checksum])
-        return (fileinfo_from_row(row) for row in cur)
+        return (fileinfo_from_row(row) for row in self.cur)
 
     def get_duplicates(self, path):
-        cur = self.con.cursor()
-
         # doing the GLOB early speeds things up a good bit, even so it
         # has to be done twice
         stmt = (
@@ -582,11 +584,11 @@ class Database:
         )
 
         arg = os.path.join(os.fsencode(path), b"*")
-        cur.execute(stmt, [arg, arg])
+        self.execute(stmt, [arg, arg])
 
         current_sha1 = None
         group = []
-        for row in cur:
+        for row in self.cur:
             fileinfo = fileinfo_from_row(row)
 
             if current_sha1 != fileinfo.blob.sha1:
@@ -602,18 +604,14 @@ class Database:
             yield group
 
     def get_generations_range(self):
-        cur = self.con.cursor()
-
-        cur.execute(
+        self.execute(
             "SELECT MIN(id), MAX(id) + 1 "
             "FROM generation")
 
-        rows = cur.fetchall()
+        rows = self.cur.fetchall()
         return GenerationRange(rows[0][0], rows[0][1])
 
     def get_generations(self, grange):
-        cur = self.con.cursor()
-
         if grange.start is not None and grange.end is not None:
             condition = "? <= id AND id < ?"
             bindings = [grange.start, grange.end]
@@ -627,18 +625,17 @@ class Database:
             condition = ""
             bindings = []
 
-        cur.execute(
+        self.execute(
             "SELECT * "
             "FROM generation " +
             WHERE(condition),
             bindings)
 
-        return [generation_from_row(row) for row in cur]
+        return [generation_from_row(row) for row in self.cur]
 
     def fsck(self):
         # check for path that have multiple alive FileInfo associated with them
-        cur = self.con.cursor()
-        cur.execute(
+        self.execute(
             "SELECT * "
             "FROM ( "
             "  SELECT * "
@@ -647,25 +644,25 @@ class Database:
             "  ) AS birth "
             "GROUP BY path "
             "HAVING COUNT(*) > 1")
-        for row in cur:
+        for row in self.cur:
             fileinfo = fileinfo_from_row(row)
             print("error: double-alive: {}".format(fileinfo.path))
 
         # check for FileInfo that have never been born
-        cur.execute(
+        self.execute(
             "SELECT * "
             "FROM fileinfo "
             "WHERE birth is NULL ")
-        for row in cur:
+        for row in self.cur:
             fileinfo = fileinfo_from_row(row)
             print("error: birth must not be NULL: {}".format(fileinfo.path))
 
         # check for orphaned BlobInfo
-        cur.execute(
+        self.execute(
             "SELECT count(*) "
             "FROM blobinfo "
             "WHERE fileinfo_id NOT IN (SELECT id from fileinfo)")
-        rows = cur.fetchall()
+        rows = self.cur.fetchall()
         if rows[0][0] > 0:
             print("error: {} orphaned BlobInfo".format(rows[0][0]))
 
@@ -683,32 +680,29 @@ class Database:
         self.insert_size = 0
 
     def print_info(self):
-        cur = self.con.cursor()
-
-        cur.execute(
+        self.execute(
             "SELECT COUNT(*) "
             "FROM fileinfo "
             "WHERE death is NULL")
-        print("{} files in database".format(cur.fetchall()[0][0]))
+        print("{} files in database".format(self.cur.fetchall()[0][0]))
 
-        cur.execute(
+        self.execute(
             "SELECT COUNT(*) "
             "FROM fileinfo "
             "WHERE death IS NOT NULL")
-        print("{} dead files in database".format(cur.fetchall()[0][0]))
+        print("{} dead files in database".format(self.cur.fetchall()[0][0]))
 
-        cur.execute(
+        self.execute(
             "SELECT COUNT(*) "
             "FROM directory")
-        print("{} directories in database".format(cur.fetchall()[0][0]))
+        print("{} directories in database".format(self.cur.fetchall()[0][0]))
 
     def dump(self):
         """Dump the content of the database to stdout"""
-        cur = self.con.cursor()
         for tbl in ['fileinfo', 'directory', 'blobinfo', 'linkinfo', 'generation']:
             print("\n{}:".format(tbl))
-            cur.execute("SELECT * FROM {}".format(tbl))
-            for row in cur:
+            self.execute("SELECT * FROM {}".format(tbl))
+            for row in self.cur:
                 print(" ", row)
 
 
