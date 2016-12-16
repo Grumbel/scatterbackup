@@ -39,6 +39,7 @@ class GenerationRange:
 
         if text:
             text = text.strip()
+            text = text.replace("^", "-")
             m = re.match(r"^(-?[0-9]+):(-?[0-9]+)$", text)
             if m:
                 start, end = m.groups()
