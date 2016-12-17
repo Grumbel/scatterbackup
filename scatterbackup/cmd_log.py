@@ -18,6 +18,7 @@
 import os
 import argparse
 import datetime
+import logging
 from collections import defaultdict
 
 import scatterbackup.util
@@ -25,7 +26,7 @@ import scatterbackup.config
 import scatterbackup.database
 import scatterbackup.time
 from scatterbackup.time import format_time
-from scatterbackup.util import sb_init
+from scatterbackup.util import sb_init, split
 from scatterbackup.units import bytes2human_decimal
 from scatterbackup.generation import GenerationRange
 from scatterbackup.format import Time
@@ -50,6 +51,86 @@ def parse_args():
     return parser.parse_args()
 
 
+def gather_changed(fileinfos):
+    by_path = defaultdict(list)
+    for fi in fileinfos:
+        by_path[fi.path].append(fi)
+
+    changed, rest = split(lambda fs: len(fs) != 1,
+                          by_path.values())
+    rest = [fi[0] for fi in rest]
+
+    results = []
+    for group in changed:
+        old = min(group, key=lambda fi: fi.birth)
+        new = max(group, key=lambda fi: fi.birth)
+        results.append((old, new))
+
+    return results, rest
+
+
+def gather_renamed(fileinfos):
+    by_ino = defaultdict(list)
+    for fi in fileinfos:
+        by_ino[fi.ino].append(fi)
+
+    renamed, rest = split(lambda fs: len(fs) != 1,
+                          by_ino.values())
+    rest = [fi[0] for fi in rest]
+
+    results = []
+    for group in renamed:
+        old = min(group, key=lambda fi: fi.birth)
+        new = max(group, key=lambda fi: fi.birth)
+        results.append((old, new))
+
+    return results, rest
+
+
+def gather_added_deleted(fileinfos, gen):
+    return split(lambda fs: fs.birth == gen,
+                 fileinfos)
+
+
+def build_report(fileinfos, gen):
+    changed, fileinfos = gather_changed(fileinfos)
+    renamed, fileinfos = gather_renamed(fileinfos)
+    added, deleted = gather_added_deleted(fileinfos, gen)
+
+    report = \
+        [("deleted", g) for g in deleted] + \
+        [("changed", g) for g in changed] + \
+        [("renamed", g) for g in renamed] + \
+        [("added", g) for g in added]
+
+    return report
+
+
+def print_report(report):
+    for status, g in report:
+        if status == "changed":
+            print_fileinfo(status, g[0])
+            print_fileinfo("  to", g[1])
+        elif status == "renamed":
+            print_fileinfo(status, g[0])
+            print_fileinfo("  to", g[1])
+        elif status == "added":
+            print_fileinfo(status, g)
+        elif status == "deleted":
+            print_fileinfo(status, g)
+        else:
+            logging.error("unknown status: '%s' for %s", status, g)
+
+
+def print_fileinfo(status, fileinfo):
+    print("{:8} {:>10}  {}  {}"
+          .format(status,
+                  # fileinfo.ino,
+                  bytes2human_decimal(fileinfo.size),
+                  fileinfo.blob and fileinfo.blob.sha1,
+                  fileinfo.path))
+
+
 def process_path(db, args, paths, gen_range):
     path_globs = [os.path.join(os.path.abspath(path), "*") for path in paths]
 
@@ -61,13 +142,13 @@ def process_path(db, args, paths, gen_range):
 
         generation = db.get_generations(grange)[0]
 
-        fileinfos = db.get_by_glob(path_globs, grange)
+        fileinfos = list(db.get_by_glob(path_globs, grange))
 
-        group_by_path = defaultdict(list)
-        for f in (j for j in fileinfos if j.kind != "directory"):
-            group_by_path[f.path].append(f)
+        # TODO: filter directory entries by default, might be a good
+        # idea to make this an option
+        fileinfos = [fi for fi in fileinfos if fi.kind != "directory"]
 
-        if group_by_path == {}:
+        if fileinfos == []:
             pass
         else:
             print("\n-- generation {}: [{} - {}] - {}"
@@ -75,28 +156,8 @@ def process_path(db, args, paths, gen_range):
                           Time(generation.start_time),
                           Time(generation.end_time),
                           generation.command))
-
-            for p, group in group_by_path.items():
-                fileinfo = group[-1]
-
-                if len(group) > 1:
-                    status = "changed"
-                elif fileinfo.birth == gen:
-                    status = "added"
-                elif fileinfo.death == gen:
-                    status = "deleted"
-
-                # TODO: make summary of changes:
-                # compare(group[0], group[1])
-
-                # TODO: insert rename detection
-
-                print("{:8} {:>10}  {}  {}"
-                      .format(status,
-                              # fileinfo.ino,
-                              bytes2human_decimal(fileinfo.size),
-                              fileinfo.blob and fileinfo.blob.sha1,
-                              fileinfo.path))
+            report = build_report(fileinfos, gen)
+            print_report(report)
 
 
 def print_generations(db, args, gen_range):
