@@ -35,10 +35,12 @@ def WHERE(stmt):
 
 
 def OR(*stmts):
+    stmts = [stmt for stmt in stmts if stmt]
     return " OR ".join("(" + stmt + ")" for stmt in stmts)
 
 
 def AND(*stmts):
+    stmts = [stmt for stmt in stmts if stmt]
     return " AND ".join("(" + stmt + ")" for stmt in stmts)
 
 
