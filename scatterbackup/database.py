@@ -19,6 +19,7 @@ import os
 import sys
 import sqlite3
 import time
+import logging
 
 from scatterbackup.generation import Generation, GenerationRange
 from scatterbackup.fileinfo import FileInfo
@@ -442,8 +443,15 @@ class Database:
 
             return (fileinfo_from_row(row) for row in self.cur)
 
-    def get_by_path_many(self, path):
-        return self.get_by_path(path, GenerationRange.MATCH_ALL)
+    def get_one_by_path(self, path, grange=None):
+        gen = self.get_by_path(path, grange)
+        lst = list(gen)
+        if lst == []:
+            return None
+        elif len(lst) > 1:
+            logging.warning("multiple rows in database, expected one: %s", lst)
+
+        return lst[-1]
 
     def get_by_path(self, path, grange=None):
         """When grange is None, return only the active file, otherwise return
@@ -461,16 +469,7 @@ class Database:
                     "path = cast(? as TEXT)")) +
             "ORDER BY birth ASC",
             args + [os.fsencode(path)])
-        rows = self.cur.fetchall()
-        if len(rows) == 0:
-            return None
-        else:
-            if grange is not None:
-                return [fileinfo_from_row(row) for row in rows]
-            else:
-                row = rows[-1]
-                fileinfo = fileinfo_from_row(row)
-                return fileinfo
+        return (fileinfo_from_row(row) for row in self.cur)
 
     def get_all(self):
         self.execute(
@@ -524,7 +523,10 @@ class Database:
 
         return (fileinfo_from_row(row) for row in self.cur)
 
-    def get_by_checksum(self, checksum_type, checksum):
+    def get_by_checksum(self, checksum_type, checksum, grange=None):
+        grange_args = []
+        grange_stmt = grange_to_sql(grange, grange_args)
+
         self.execute(
             "WITH "
 
@@ -537,11 +539,11 @@ class Database:
             "SELECT * "
             "FROM fileinfo "
             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
-            "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
-            "WHERE "
-            "  fileinfo.death is NULL AND "
-            "  fileinfo.id in matching_fileinfos".format(checksum_type),
-            [checksum])
+            "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id " +
+            WHERE(
+                AND(grange_stmt,
+                    "  fileinfo.id in matching_fileinfos".format(checksum_type))),
+            grange_args + [checksum])
         return (fileinfo_from_row(row) for row in self.cur)
 
     def get_duplicates(self, path):

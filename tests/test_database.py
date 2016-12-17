@@ -38,9 +38,9 @@ class DatabaseTestCase(unittest.TestCase):
         del self.db
 
     def test_get_by_path(self):
-        fileinfo = self.db.get_by_path(os.path.abspath("tests/data/test.txt"))
+        fileinfo = self.db.get_one_by_path(os.path.abspath("tests/data/test.txt"))
         self.assertEqual(fileinfo.path, os.path.abspath("tests/data/test.txt"))
-        self.assertIsNone(self.db.get_by_path(os.path.abspath("non-existing-file.txt")))
+        self.assertIsNone(self.db.get_one_by_path(os.path.abspath("non-existing-file.txt")))
 
     def test_get_directory_by_path(self):
         fileinfos = list(self.db.get_directory_by_path(os.path.abspath("tests/data/")))

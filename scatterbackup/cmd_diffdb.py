@@ -41,7 +41,7 @@ def diff(db, oldpath, newpath, excludes, verbose=False):
         if path_excluded(path, excludes):
             continue
 
-        newfileinfo = db.get_by_path(os.path.join(newpath, path))
+        newfileinfo = db.get_one_by_path(os.path.join(newpath, path))
         if newfileinfo is None:
             print("removed {}".format(path))
         else:
@@ -58,7 +58,7 @@ def diff(db, oldpath, newpath, excludes, verbose=False):
         if path_excluded(path, excludes):
             continue
 
-        oldfileinfo = db.get_by_path(os.path.join(oldpath, path))
+        oldfileinfo = db.get_one_by_path(os.path.join(oldpath, path))
 
         if oldfileinfo is None:
             print("added {}".format(path))

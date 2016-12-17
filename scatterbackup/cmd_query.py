@@ -24,6 +24,7 @@ import scatterbackup.util
 from scatterbackup.util import sb_init
 from scatterbackup.database import Database
 from scatterbackup.format import FileInfoFormatter
+from scatterbackup.generation import GenerationRange
 
 
 def make_case_insensitive(pattern):
@@ -63,6 +64,8 @@ def parse_args():
                         help="Return results as json")
     parser.add_argument('-f', '--format', type=str,
                         help="Format string for results")
+    parser.add_argument('-a', '--all', action='store_true', default=False,
+                        help="List all entries in db, not only alive ones")
     return parser.parse_args()
 
 
@@ -98,6 +101,11 @@ def main():
 
         print_fun = my_print_fun
 
+    if args.all:
+        grange = GenerationRange.MATCH_ALL
+    else:
+        grange = None
+
     # query the database
     if args.PATH == [] and \
        args.glob == [] and \
@@ -111,12 +119,13 @@ def main():
         # PATH
         for path in args.PATH:
             path = os.path.abspath(path)
-            fileinfo = db.get_by_path(path)
-            process_fileinfo(fileinfo, print_fun, path)
+            fileinfos = db.get_by_path(path, grange)
+            for fileinfo in fileinfos:
+                process_fileinfo(fileinfo, print_fun, path)
 
         # --iglob
         for pattern in args.glob:
-            fileinfos = db.get_by_glob(pattern)
+            fileinfos = db.get_by_glob(pattern, grange)
             for fileinfo in fileinfos:
                 process_fileinfo(fileinfo, print_fun, pattern)
 
@@ -127,7 +136,7 @@ def main():
             if args.verbose:
                 print("Pattern: {}".format(pattern))
 
-            fileinfos = db.get_by_glob(pattern)
+            fileinfos = db.get_by_glob(pattern, grange)
             for fileinfo in fileinfos:
                 process_fileinfo(fileinfo, print_fun, pattern)
 
