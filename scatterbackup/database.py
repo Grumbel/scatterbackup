@@ -148,6 +148,7 @@ class Database:
         self.current_generation = None
 
         self.cur = self.con.cursor()
+        self.cur.execute("PRAGMA journal_mode = WAL")
         self.init_tables()
 
     def init_tables(self):
