@@ -39,10 +39,17 @@ def main():
     args = parse_args()
     db = Database(args.database or scatterbackup.util.make_default_database())
 
+    db_changed = False
     if args.rebuild_directory_table:
         db.rebuild_directory_table()
-    elif args.cleanup_double_alive:
+        db_changed = True
+
+    if args.cleanup_double_alive:
         db.cleanup_double_alive()
+        db_changed = True
+
+    if db_changed:
+        db.commit()
     else:
         db.fsck()
 
