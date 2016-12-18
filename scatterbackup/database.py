@@ -129,7 +129,9 @@ def fileinfo_from_row(row):
 
 class Database:
 
-    def __init__(self, filename):
+    def __init__(self, filename, sql_debug=False):
+        self.sql_debug = sql_debug
+
         self.insert_count = 0  # number of inserts since last commit
         self.insert_size = 0  # number of blob bytes processed since last commit
         self.last_commit_time = time.time()
@@ -477,26 +479,25 @@ class Database:
             "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id ")
         return (fileinfo_from_row(row) for row in self.cur)
 
-    def execute(self, sql, args=[]):
-        if False:
-            print(",-----\nSQL-execute:")
-            sql_pretty_print(sql)
-            print("ARGS: {}\n".format(args))
+    def sql_print_debug(self, sql, args):
+        print(",-----\nSQL-execute:")
+        sql_pretty_print(sql)
+        print("ARGS: {}\n".format(args))
 
-            self.cur.execute("EXPLAIN QUERY PLAN " + sql, args)
-            for row in self.cur:
-                print("EXPLAIN:", row)
-            print("`-----\n")
+        self.cur.execute("EXPLAIN QUERY PLAN " + sql, args)
+        for row in self.cur:
+            print("EXPLAIN:", row)
+        print("`-----\n")
+
+    def execute(self, sql, args=[]):
+        if self.sql_debug:
+            self.sql_print_debug(sql, args)
 
         return self.cur.execute(sql, args)
 
     def executemany(self, sql, args):
-        if False:
-            print("SQL-executemany:")
-            sql_pretty_print(sql)
-            print("ARGS:")
-            for a in args:
-                print("  {}".format(a))
+        if self.sql_debug:
+            self.sql_print_debug(sql, args)
 
         return self.cur.executemany(sql, args)
 

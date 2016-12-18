@@ -211,6 +211,8 @@ def parse_args():
                         help="Set the output filename")
     parser.add_argument('-D', '--non-recursive', action='store_true', default=False,
                         help="Only process given directory")
+    parser.add_argument('--debug-sql', action='store_true', default=False,
+                        help="Debug SQL queries")
     return parser.parse_args()
 
 
@@ -225,7 +227,7 @@ def main():
     if args.dry_run:
         db = NullDatabase()
     else:
-        db = Database(args.database or scatterbackup.util.make_default_database())
+        db = Database(args.database or scatterbackup.util.make_default_database(), args.debug_sql)
 
     gen = db.init_generation(" ".join([shlex.quote(a) for a in sys.argv]))
 
