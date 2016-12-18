@@ -479,9 +479,14 @@ class Database:
 
     def execute(self, sql, args=[]):
         if False:
-            print("SQL-execute:")
+            print(",-----\nSQL-execute:")
             sql_pretty_print(sql)
-            print("ARGS: {}".format(args))
+            print("ARGS: {}\n".format(args))
+
+            self.cur.execute("EXPLAIN QUERY PLAN " + sql, args)
+            for row in self.cur:
+                print("EXPLAIN:", row)
+            print("`-----\n")
 
         return self.cur.execute(sql, args)
 
