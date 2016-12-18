@@ -291,7 +291,7 @@ class Database:
                 "UPDATE directory "
                 "SET parent_id = ("
                 "  SELECT t.id FROM directory AS t "
-                "  WHERE t.path = directory.path)"
+                "  WHERE t.path = py_dirname(directory.path))"
                 "WHERE parent_id IS NULL")
 
             # retry to query the directory_id
