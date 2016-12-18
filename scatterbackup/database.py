@@ -235,12 +235,15 @@ class Database:
         self.execute("CREATE INDEX IF NOT EXISTS fileinfo_death_index ON fileinfo (death)")
         self.execute("CREATE INDEX IF NOT EXISTS fileinfo_birth_index ON fileinfo (birth)")
 
-        self.execute("CREATE INDEX IF NOT EXISTS directory_path_index ON directory (path)")
+        self.execute("CREATE UNIQUE INDEX IF NOT EXISTS directory_path_index ON directory (path)")
         self.execute("CREATE INDEX IF NOT EXISTS directory_parent_id_index ON directory (parent_id)")
 
         self.execute("CREATE INDEX IF NOT EXISTS blobinfo_fileinfo_id_index ON blobinfo (fileinfo_id)")
         self.execute("CREATE INDEX IF NOT EXISTS blobinfo_sha1_index ON blobinfo (sha1)")
         self.execute("CREATE INDEX IF NOT EXISTS blobinfo_md5_index ON blobinfo (md5)")
+
+        self.execute("CREATE INDEX IF NOT EXISTS linkinfo_fileinfo_id_index ON linkinfo (fileinfo_id)")
+
         self.con.commit()
 
     def init_generation(self, cmd):
