@@ -19,6 +19,7 @@ import os
 import argparse
 import datetime
 import logging
+import itertools
 from collections import defaultdict
 
 import scatterbackup.util
@@ -97,11 +98,11 @@ def build_report(fileinfos, gen):
     renamed, fileinfos = gather_renamed(fileinfos)
     added, deleted = gather_added_deleted(fileinfos, gen)
 
-    report = \
-        [("deleted", g) for g in deleted] + \
-        [("changed", g) for g in changed] + \
-        [("renamed", g) for g in renamed] + \
-        [("added", g) for g in added]
+    report = itertools.chain(
+        (("deleted", g) for g in deleted),
+        (("changed", g) for g in changed),
+        (("renamed", g) for g in renamed),
+        (("added", g) for g in added))
 
     return report
 
