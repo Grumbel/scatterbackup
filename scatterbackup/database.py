@@ -780,6 +780,10 @@ class Database:
             for row in self.cur:
                 print(" ", row)
 
+    def vacuum(self):
+        self.execute(
+            "VACUUM")
+
 
 class NullDatabase:
 

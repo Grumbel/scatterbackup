@@ -33,6 +33,8 @@ def parse_args():
                         help="Cleanup double-alive FileInfos")
     parser.add_argument('--rebuild-indices', action='store_true', default=False,
                         help="Rebuild indices")
+    parser.add_argument('--vacuum', action='store_true', default=False,
+                        help="Call vacuum on the database")
     return parser.parse_args()
 
 
@@ -52,6 +54,10 @@ def main():
 
     if args.rebuild_indices:
         db.rebuild_indices()
+        db_changed = True
+
+    if args.vacuum:
+        db.vacuum()
         db_changed = True
 
     if db_changed:
