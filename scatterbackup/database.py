@@ -497,7 +497,7 @@ class Database:
 
     def executemany(self, sql, args):
         if self.sql_debug:
-            self.sql_print_debug(sql, args)
+            self.sql_print_debug(sql, args[0])
 
         return self.cur.executemany(sql, args)
 
