@@ -286,7 +286,7 @@ class Database:
                 "UPDATE directory "
                 "SET parent_id = ("
                 "  SELECT t.id FROM directory AS t "
-                "  WHERE t.path = py_dirname(directory.path))"
+                "  WHERE t.path = cast(py_dirname(directory.path) AS TEXT))"
                 "WHERE parent_id IS NULL")
 
             # retry to query the directory_id
@@ -730,8 +730,14 @@ class Database:
             "UPDATE directory "
             "SET parent_id = ("
             "  SELECT t.id FROM directory AS t "
-            "  WHERE t.path = cast(py_dirname(directory.path) AS TEXT)) "
-            "WHERE parent_id IS NULL")
+            "  WHERE t.path = cast(py_dirname(directory.path) AS TEXT))")
+
+        print("Setting directory_ids in fileinfo table")
+        self.execute(
+            "UPDATE fileinfo "
+            "SET directory_id = ("
+            "  SELECT id FROM directory "
+            "  WHERE directory.path = cast(py_dirname(fileinfo.path) AS TEXT))")
 
     def dump(self):
         """Dump the content of the database to stdout"""
