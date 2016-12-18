@@ -193,12 +193,7 @@ class Database:
             "sha1 TEXT"
             ")")
 
-        self.execute(
-            "CREATE TABLE IF NOT EXISTS directory("
-            "id INTEGER PRIMARY KEY, "
-            "path TEXT UNIQUE, "
-            "parent_id INTEGER"
-            ")")
+        self.create_directory_table()
 
         self.execute(
             "CREATE TABLE IF NOT EXISTS linkinfo("
@@ -668,6 +663,15 @@ class Database:
         if rows[0][0] > 0:
             print("error: {} orphaned BlobInfo".format(rows[0][0]))
 
+        # check for self referencing parent_ids in directory table
+        self.execute(
+            "SELECT id, parent_id, path  "
+            "FROM directory "
+            "WHERE id = parent_id")
+        for row in self.cur:
+            print("error: self-reference in directory table: id={} parent_id={} path='{}'"
+                  .format(row[0], row[1], row[2]))
+
     def commit(self):
         t = time.time()
         print("------------------- commit -------------------:",
@@ -698,6 +702,36 @@ class Database:
             "SELECT COUNT(*) "
             "FROM directory")
         print("{} directories in database".format(self.cur.fetchall()[0][0]))
+
+    def create_directory_table(self):
+        self.execute(
+            "CREATE TABLE IF NOT EXISTS directory("
+            "id INTEGER PRIMARY KEY, "
+            "path TEXT UNIQUE, "
+            "parent_id INTEGER"
+            ")")
+
+    def rebuild_directory_table(self):
+        print("Deleting old directory table")
+        self.execute(
+            "DROP TABLE directory")
+
+        print("Creating empty directory table")
+        self.create_directory_table()
+
+        print("Filling directory table with content")
+        self.execute(
+            "INSERT OR IGNORE INTO directory "
+            "  SELECT NULL, cast(py_dirname(path) AS TEXT), id "
+            "  FROM fileinfo")
+
+        print("Setting parent_ids in directory table")
+        self.execute(
+            "UPDATE directory "
+            "SET parent_id = ("
+            "  SELECT t.id FROM directory AS t "
+            "  WHERE t.path = cast(py_dirname(directory.path) AS TEXT)) "
+            "WHERE parent_id IS NULL")
 
     def dump(self):
         """Dump the content of the database to stdout"""

@@ -27,6 +27,8 @@ def parse_args():
                         help="Store results in database")
     parser.add_argument('-v', '--verbose', action='store_true', default=False,
                         help="Be more verbose")
+    parser.add_argument('--rebuild-directory-table', action='store_true', default=False,
+                        help="Rebuild directory table")
     return parser.parse_args()
 
 
@@ -34,7 +36,11 @@ def main():
     sb_init()
     args = parse_args()
     db = Database(args.database or scatterbackup.util.make_default_database())
-    db.fsck()
+
+    if args.rebuild_directory_table:
+        db.rebuild_directory_table()
+    else:
+        db.fsck()
 
 
 # EOF #
