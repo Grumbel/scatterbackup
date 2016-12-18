@@ -29,6 +29,8 @@ def parse_args():
                         help="Be more verbose")
     parser.add_argument('--rebuild-directory-table', action='store_true', default=False,
                         help="Rebuild directory table")
+    parser.add_argument('--cleanup-double-alive', action='store_true', default=False,
+                        help="Cleanup double-alive FileInfos")
     return parser.parse_args()
 
 
@@ -39,6 +41,8 @@ def main():
 
     if args.rebuild_directory_table:
         db.rebuild_directory_table()
+    elif args.cleanup_double_alive:
+        db.cleanup_double_alive()
     else:
         db.fsck()
 

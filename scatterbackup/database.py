@@ -634,11 +634,8 @@ class Database:
         # check for path that have multiple alive FileInfo associated with them
         self.execute(
             "SELECT * "
-            "FROM ( "
-            "  SELECT * "
-            "  FROM fileinfo "
-            "  WHERE death is NULL "
-            "  ) AS birth "
+            "FROM fileinfo "
+            "WHERE death is NULL "
             "GROUP BY path "
             "HAVING COUNT(*) > 1")
         for row in self.cur:
@@ -738,6 +735,28 @@ class Database:
             "SET directory_id = ("
             "  SELECT id FROM directory "
             "  WHERE directory.path = cast(py_dirname(fileinfo.path) AS TEXT))")
+
+    def cleanup_double_alive(self):
+        self.execute(
+            "WITH "
+
+            "duplicate_path AS ("
+            "  SELECT path "
+            "  FROM fileinfo "
+            "  WHERE death is NULL "
+            "  GROUP BY path "
+            "  HAVING COUNT(*) > 1), "
+
+            "keep_id AS ("
+            "  SELECT MAX(fileinfo.id) "
+            "  FROM duplicate_path "
+            "  LEFT JOIN fileinfo ON fileinfo.path = duplicate_path.path "
+            "  GROUP BY fileinfo.path) "
+
+            "DELETE FROM fileinfo "
+            "WHERE "
+            "  path IN duplicate_path AND "
+            "  id NOT IN keep_id")
 
     def dump(self):
         """Dump the content of the database to stdout"""
