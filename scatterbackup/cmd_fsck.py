@@ -31,6 +31,8 @@ def parse_args():
                         help="Rebuild directory table")
     parser.add_argument('--cleanup-double-alive', action='store_true', default=False,
                         help="Cleanup double-alive FileInfos")
+    parser.add_argument('--rebuild-indices', action='store_true', default=False,
+                        help="Rebuild indices")
     return parser.parse_args()
 
 
@@ -46,6 +48,10 @@ def main():
 
     if args.cleanup_double_alive:
         db.cleanup_double_alive()
+        db_changed = True
+
+    if args.rebuild_indices:
+        db.rebuild_indices()
         db_changed = True
 
     if db_changed:

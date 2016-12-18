@@ -758,6 +758,20 @@ class Database:
             "  path IN duplicate_path AND "
             "  id NOT IN keep_id")
 
+    def rebuild_indices(self):
+        self.execute(
+            "SELECT name "
+            "FROM sqlite_master "
+            "WHERE "
+            "  type = 'index' AND "
+            "  sql IS NOT NULL")
+
+        rows = list(self.cur)
+        for row in rows:
+            name = row[0]
+            print("dropping {}".format(name))
+            self.execute("DROP INDEX {}".format(name))
+
     def dump(self):
         """Dump the content of the database to stdout"""
         for tbl in ['fileinfo', 'directory', 'blobinfo', 'linkinfo', 'generation']:
