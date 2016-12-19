@@ -132,8 +132,17 @@ def print_fileinfo(status, fileinfo):
                   fileinfo.path))
 
 
+def path_to_glob(path):
+    # FIXME: This heuristic to automatically generate a pattern for
+    # the database query is a bit primitive
+    if os.path.isdir(path):
+        return os.path.join(path, "*")
+    else:
+        return path
+
+
 def process_path(db, args, paths, gen_range):
-    path_globs = [os.path.join(os.path.abspath(path), "*") for path in paths]
+    path_globs = [path_to_glob(os.path.abspath(path)) for path in paths]
 
     dbrange = db.get_generations_range()
     gen_range.clip_to(dbrange)
