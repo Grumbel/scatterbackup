@@ -16,7 +16,6 @@
 
 
 import os
-import sys
 import sqlite3
 import time
 import logging
@@ -220,15 +219,23 @@ class Database:
             ")")
 
         def py_dirname(p):
-            try:
-                if p is None:
-                    print("WHY?!")
-                    return None
-                else:
-                    return os.fsencode(os.path.dirname(p))
-            except:
-                print("ERROR", sys.exc_info())
+            """SQL text with invalid UTF-8 can't be passed directly to a custom
+            functions, only 'None' will be received. The UTF-8 needs
+            to be converted to a blob first and then back to text once
+            the custom function returned. this can be done with:
+
+            cast(py_dirname(cast(column_name AS BLOB)) AS TEXT)
+
+            """
+
+            if type(p) is not bytes:
+                logging.error("error: py_dirname() parameter is not bytes")
+
+            if p is None:
+                print("WHY?!")
                 return None
+            else:
+                return os.path.dirname(p)
 
         self.con.create_function("py_dirname", 1, py_dirname)
 
@@ -292,7 +299,7 @@ class Database:
                 "UPDATE directory "
                 "SET parent_id = ("
                 "  SELECT t.id FROM directory AS t "
-                "  WHERE t.path = cast(py_dirname(directory.path) AS TEXT))"
+                "  WHERE t.path = cast(py_dirname(cast(directory.path AS BLOB)) AS TEXT))"
                 "WHERE parent_id IS NULL")
 
             # retry to query the directory_id
@@ -498,6 +505,7 @@ class Database:
 
     def executemany(self, sql, args):
         if self.sql_debug:
+            print("ALL ARGS:", args)
             self.sql_print_debug(sql, args[0])
 
         return self.cur.executemany(sql, args)
@@ -729,7 +737,7 @@ class Database:
         print("Filling directory table with content")
         self.execute(
             "INSERT OR IGNORE INTO directory "
-            "  SELECT NULL, cast(py_dirname(path) AS TEXT), id "
+            "  SELECT NULL, cast(py_dirname(cast(path AS BLOB)) AS TEXT), id "
             "  FROM fileinfo")
 
         print("Setting parent_ids in directory table")
@@ -737,14 +745,14 @@ class Database:
             "UPDATE directory "
             "SET parent_id = ("
             "  SELECT t.id FROM directory AS t "
-            "  WHERE t.path = cast(py_dirname(directory.path) AS TEXT))")
+            "  WHERE t.path = cast(py_dirname(cast(directory.path AS BLOB)) AS TEXT))")
 
         print("Setting directory_ids in fileinfo table")
         self.execute(
             "UPDATE fileinfo "
             "SET directory_id = ("
             "  SELECT id FROM directory "
-            "  WHERE directory.path = cast(py_dirname(fileinfo.path) AS TEXT))")
+            "  WHERE directory.path = cast(py_dirname(cast(fileinfo.path AS BLOB)) AS TEXT))")
 
     def cleanup_double_alive(self):
         self.execute(
