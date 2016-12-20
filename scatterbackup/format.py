@@ -211,10 +211,16 @@ class FileInfoFormatter:
         return self.fileinfo.gid
 
     def owner(self):
-        return getpwuid(self.fileinfo.uid).pw_name  # FIXME: maybe cache this?
+        try:
+            return getpwuid(self.fileinfo.uid).pw_name  # FIXME: maybe cache this?
+        except KeyError as err:
+            return str(self.fileinfo.uid)
 
     def group(self):
-        return getgrgid(self.fileinfo.gid).gr_name  # FIXME: maybe cache this?
+        try:
+            return getgrgid(self.fileinfo.gid).gr_name  # FIXME: maybe cache this?
+        except KeyError as err:
+            return str(self.fileinfo.gid)
 
     def rdev(self):
         return self.fileinfo.rdev
