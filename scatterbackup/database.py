@@ -648,6 +648,27 @@ class Database:
 
         return [generation_from_row(row) for row in self.cur]
 
+    def get_affected_generations(self, fileinfo_query):
+        """Return a list of all generations in which files matching
+        'fileinfo_query' where changed
+
+        """
+
+        self.execute(
+            "SELECT DISTINCT birth AS gen "
+            "FROM fileinfo "
+            "WHERE path GLOB ? "
+            "UNION "
+            "SELECT DISTINCT death AS gen "
+            "FROM fileinfo "
+            "WHERE path GLOB ? AND "
+            "      death IS NOT NULL "
+            "ORDER BY gen",
+            [fileinfo_query,
+             fileinfo_query])
+
+        return list(self.cur)
+
     def fsck(self):
         # check for path that have multiple alive FileInfo associated with them
         self.execute(
