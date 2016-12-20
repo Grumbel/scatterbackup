@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import os
 import stat
 import datetime
 from pwd import getpwuid
@@ -180,6 +181,20 @@ class Mode:
         return s
 
 
+class RelPath:
+
+    def __init__(self, path):
+        self.path = path
+
+    def __format__(self, spec):
+        r = spec.rsplit(":", maxsplit=1)
+        str_spec, spec = r if len(r) == 2 else (r[0], "")
+        return format(self.as_str(spec), str_spec)
+
+    def as_str(self, spec):
+        return os.path.relpath(self.path, spec)
+
+
 class FileInfoFormatter:
 
     def __init__(self, fileinfo):
@@ -191,6 +206,9 @@ class FileInfoFormatter:
 
     def path(self):
         return self.fileinfo.path
+
+    def relpath(self):
+        return RelPath(self.fileinfo.path)
 
     def dev(self):
         return self.fileinfo.dev
