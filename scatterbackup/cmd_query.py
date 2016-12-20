@@ -62,10 +62,18 @@ def parse_args():
                         help="Query the database for the given md5")
     parser.add_argument('-j', '--json', action='store_true',
                         help="Return results as json")
-    parser.add_argument('-f', '--format', type=str,
-                        help="Format string for results")
     parser.add_argument('-a', '--all', action='store_true', default=False,
                         help="List all entries in db, not only alive ones")
+
+    fmt_group = parser.add_argument_group("Format Options")
+    fmt_group = fmt_group.add_mutually_exclusive_group()
+    fmt_group.add_argument('-f', '--format', type=str,
+                           help="Format string for results")
+    fmt_group.add_argument('--md5sum', action='store_true', default=False,
+                           help="Print results in md5sum style")
+    fmt_group.add_argument('--sha1sum', action='store_true', default=False,
+                           help="Print results in sha1sum style")
+
     return parser.parse_args()
 
 
@@ -94,7 +102,14 @@ def main():
     if args.json:
         print_fun = process_fileinfo_json
     else:
-        fmt = args.format or "{mode} {owner:8} {group:8} {size:>8} {time} {path}"
+        if args.format:
+            fmt = args.format
+        elif args.md5sum:
+            fmt = "{md5:32}  {path}"
+        elif args.sha1sum:
+            fmt = "{sha1:40}  {path}"
+        else:
+            "{mode} {owner:8} {group:8} {size:>8} {time} {path}"
 
         def my_print_fun(fileinfo):
             process_fileinfo_format(fileinfo, fmt)
