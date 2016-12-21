@@ -288,6 +288,7 @@ class Database:
         if len(rows) == 1:
             return rows[0][0]
         else:
+            self.execute("SAVEPOINT store_directory")
             # create path entries
             self.executemany(
                 "INSERT OR IGNORE INTO directory "
@@ -295,12 +296,38 @@ class Database:
                 [[os.fsencode(p)] for p in path_iter(path)])
 
             # update parent_ids
-            self.execute(
-                "UPDATE directory "
-                "SET parent_id = ("
-                "  SELECT t.id FROM directory AS t "
-                "  WHERE t.path = cast(py_dirname(cast(directory.path AS BLOB)) AS TEXT))"
-                "WHERE parent_id IS NULL")
+            if False:  # this is slow
+                self.execute(
+                    "UPDATE directory "
+                    "SET parent_id = ("
+                    "  SELECT t.id FROM directory AS t "
+                    "  WHERE t.path = cast(py_dirname(cast(directory.path AS BLOB)) AS TEXT))"
+                    "WHERE parent_id IS NULL")
+            else:
+                self.execute(
+                    "SELECT id, path "
+                    "FROM directory "
+                    "WHERE parent_id IS NULL")
+                parent_is_null = [(row[0], os.path.dirname(row[1])) for row in self.cur]
+
+                for d_id, parent_path in parent_is_null:
+                    self.execute(
+                        "SELECT id "
+                        "FROM directory "
+                        "WHERE path = cast(? AS TEXT)",
+                        [os.fsencode(parent_path)])
+                    rows = self.cur.fetchall()
+                    if rows == []:
+                        print("ERROR:", parent_path)
+                    parent_id = rows[0][0]
+
+                    self.execute(
+                        "UPDATE directory "
+                        "SET parent_id = ?"
+                        "WHERE id = ?",
+                        [parent_id, d_id])
+
+            self.execute("RELEASE store_directory")
 
             # retry to query the directory_id
             self.execute(
