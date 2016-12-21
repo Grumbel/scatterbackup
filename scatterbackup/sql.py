@@ -22,8 +22,9 @@ def sql_pretty_print(text):
                 "WHERE",
                 "GROUP BY",
                 "ORDER BY"]
+    text = "sql> " + text
     for keyword in keywords:
-        text = text.replace(keyword, "\n" + keyword)
+        text = text.replace(keyword, "\nsql> " + keyword)
     print(text)
 
 

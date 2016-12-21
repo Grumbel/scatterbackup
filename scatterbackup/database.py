@@ -514,28 +514,46 @@ class Database:
             "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id ")
         return (fileinfo_from_row(row) for row in self.cur)
 
-    def sql_print_debug(self, sql, args):
-        print(",-----\nSQL-execute:")
+    def sql_print_debug(self, sql, args_lst):
         sql_pretty_print(sql)
-        print("ARGS: {}\n".format(args))
+        print()
+        for args in args_lst:
+            print("ARGS: {}".format(args))
+        print()
 
-        self.cur.execute("EXPLAIN QUERY PLAN " + sql, args)
+        self.cur.execute("EXPLAIN QUERY PLAN " + sql, args_lst[0])
         for row in self.cur:
-            print("EXPLAIN:", row)
-        print("`-----\n")
+            print("explain>", row)
 
     def execute(self, sql, args=[]):
         if self.sql_debug:
-            self.sql_print_debug(sql, args)
+            print(",-----[SQL-debug: execute()]")
+            print()
+            self.sql_print_debug(sql, [args])
+            start_time = time.time()
 
-        return self.cur.execute(sql, args)
+        result = self.cur.execute(sql, args)
+
+        if self.sql_debug:
+            print("Time to execute: {:.16f} secs".format(time.time() - start_time))
+            print("`-----\n")
+
+        return result
 
     def executemany(self, sql, args):
         if self.sql_debug:
-            print("ALL ARGS:", args)
-            self.sql_print_debug(sql, args[0])
+            print(",-----[SQL-debug: executemany()]")
+            print()
+            self.sql_print_debug(sql, args)
+            start_time = time.time()
 
-        return self.cur.executemany(sql, args)
+        result = self.cur.executemany(sql, args)
+
+        if self.sql_debug:
+            print("Time to execute: {:.16f} secs".format(time.time() - start_time))
+            print("`-----\n")
+
+        return result
 
     def get_by_glob(self, patterns, grange=None):
         patterns = patterns if type(patterns) is list else [patterns]
