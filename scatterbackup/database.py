@@ -319,14 +319,18 @@ class Database:
                         [os.fsencode(parent_path)])
                     rows = self.cur.fetchall()
                     if rows == []:
-                        print("ERROR:", parent_path)
-                    parent_id = rows[0][0]
+                        # FIXME: this happens when the above INSERT is
+                        # interrupted before the parent_id are set
+                        # properly
+                        pass
+                    else:
+                        parent_id = rows[0][0]
 
-                    self.execute(
-                        "UPDATE directory "
-                        "SET parent_id = ?"
-                        "WHERE id = ?",
-                        [parent_id, d_id])
+                        self.execute(
+                            "UPDATE directory "
+                            "SET parent_id = ?"
+                            "WHERE id = ?",
+                            [parent_id, d_id])
 
             # self.execute("RELEASE store_directory")
 
