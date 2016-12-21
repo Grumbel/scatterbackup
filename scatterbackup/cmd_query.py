@@ -109,7 +109,7 @@ def main():
         elif args.sha1sum:
             fmt = "{sha1:40}  {path}"
         else:
-            "{mode} {owner:8} {group:8} {size:>8} {time} {path}"
+            fmt = "{mode} {owner:8} {group:8} {size:>8} {time} {path}"
 
         def my_print_fun(fileinfo):
             process_fileinfo_format(fileinfo, fmt)
