@@ -288,7 +288,8 @@ class Database:
         if len(rows) == 1:
             return rows[0][0]
         else:
-            self.execute("SAVEPOINT store_directory")
+            # self.execute("SAVEPOINT store_directory")
+
             # create path entries
             self.executemany(
                 "INSERT OR IGNORE INTO directory "
@@ -327,7 +328,7 @@ class Database:
                         "WHERE id = ?",
                         [parent_id, d_id])
 
-            self.execute("RELEASE store_directory")
+            # self.execute("RELEASE store_directory")
 
             # retry to query the directory_id
             self.execute(
