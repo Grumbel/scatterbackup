@@ -30,7 +30,7 @@ from scatterbackup.time import format_time
 from scatterbackup.util import sb_init, split
 from scatterbackup.units import bytes2human_decimal
 from scatterbackup.generation import GenerationRange
-from scatterbackup.format import Time
+from scatterbackup.format import Time, Bytes
 
 
 def parse_args():
@@ -52,6 +52,57 @@ def parse_args():
     return parser.parse_args()
 
 
+def compare_fileinfo(old, new):
+    changes = []
+
+    if old.kind != new.kind:
+        changes.append("type: {} -> {}".format(old.kind, new.kind))
+
+    if old.ino != new.ino:
+        changes.append("ino: {} -> {}".format(old.ino, new.ino))
+
+    if old.mode != new.mode:
+        changes.append("mode: {} -> {}".format(old.mode, new.mode))
+
+    if old.nlink != new.nlink:
+        changes.append("nlink: {} -> {}".format(old.nlink, new.nlink))
+
+    if old.uid != new.uid:
+        changes.append("uid: {} -> {}".format(old.uid, new.uid))
+
+    if old.gid != new.gid:
+        changes.append("gid: {} -> {}".format(old.gid, new.gid))
+
+    if old.size != new.size:
+        bytes_diff = new.size - old.size
+        if bytes_diff < 0:
+            sign = "-"
+        else:
+            sign = "+"
+        changes.append("size: {}{}".format(sign, Bytes(abs(bytes_diff))))
+
+    if old.blksize != new.blksize:
+        changes.append("blksize: {}".format(new.blksize - old.blksize))
+
+    if old.blocks != new.blocks:
+        changes.append("blocks: {}".format(new.blocks - old.blocks))
+
+    # to much noise
+    # if old.atime != new.atime:
+    #    changes.append("atime: {} -> {}".format(Time(old.atime), Time(new.atime)))
+
+    if old.ctime != new.ctime:
+        changes.append("ctime: {} -> {}".format(Time(old.ctime), Time(new.ctime)))
+
+    if old.mtime != new.mtime:
+        changes.append("mtime: {} -> {}".format(Time(old.mtime), Time(new.mtime)))
+
+    # self.blob = None
+    # self.target = None
+
+    return ", ".join(changes)
+
+
 def gather_changed(fileinfos):
     by_path = defaultdict(list)
     for fi in fileinfos:
@@ -65,7 +116,7 @@ def gather_changed(fileinfos):
     for group in changed:
         old = min(group, key=lambda fi: fi.birth)
         new = max(group, key=lambda fi: fi.birth)
-        results.append((old, new))
+        results.append((old, new, compare_fileinfo(old, new)))
 
     return results, rest
 
@@ -112,6 +163,7 @@ def print_report(report):
         if status == "changed":
             print_fileinfo(status, g[0])
             print_fileinfo("  to", g[1])
+            print("  ", g[2])
         elif status == "renamed":
             print_fileinfo(status, g[0])
             print_fileinfo("  to", g[1])
