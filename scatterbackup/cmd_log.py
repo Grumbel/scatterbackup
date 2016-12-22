@@ -159,6 +159,8 @@ def build_report(fileinfos, gen):
 
 
 def print_report(report):
+    report = sorted(report, key=lambda g: g[1][0].path if isinstance(g[1], tuple) else g[1].path)
+
     for status, g in report:
         if status == "changed":
             print_fileinfo(status, g[0])
