@@ -64,6 +64,8 @@ def parse_args():
                         help="Return results as json")
     parser.add_argument('-a', '--all', action='store_true', default=False,
                         help="List all entries in db, not only alive ones")
+    parser.add_argument('--debug-sql', action='store_true', default=False,
+                        help="Debug SQL queries")
 
     fmt_group = parser.add_argument_group("Format Options")
     fmt_group = fmt_group.add_mutually_exclusive_group()
@@ -96,7 +98,7 @@ def main():
     sb_init()
 
     args = parse_args()
-    db = Database(args.database or scatterbackup.util.make_default_database())
+    db = Database(args.database or scatterbackup.util.make_default_database(), args.debug_sql)
 
     # setup output format
     if args.json:
