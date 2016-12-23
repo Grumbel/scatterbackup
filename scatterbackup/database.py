@@ -602,10 +602,11 @@ class Database:
             "SELECT * "
             "FROM fileinfo "
             "LEFT JOIN blobinfo ON blobinfo.fileinfo_id = fileinfo.id "
-            "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id " +
+            "LEFT JOIN linkinfo ON linkinfo.fileinfo_id = fileinfo.id "
+            .format(checksum_type) +
             WHERE(
                 AND(grange_stmt,
-                    "  fileinfo.id in matching_fileinfos".format(checksum_type))),
+                    "  fileinfo.id in matching_fileinfos")),
             grange_args + [checksum])
         return (fileinfo_from_row(row) for row in self.cur)
 
