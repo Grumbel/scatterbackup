@@ -163,9 +163,14 @@ def print_report(report):
 
     for status, g in report:
         if status == "changed":
-            print_fileinfo(status, g[0])
-            print_fileinfo("  to", g[1])
-            print("  ", g[2])
+            if g[0].blob == g[1].blob:
+                # skip files that have the same content, make this an
+                # option
+                pass
+            else:
+                print_fileinfo(status, g[0])
+                print_fileinfo("  to", g[1])
+                print("  ", g[2])
         elif status == "renamed":
             print_fileinfo(status, g[0])
             print_fileinfo("  to", g[1])
