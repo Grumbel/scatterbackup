@@ -145,21 +145,28 @@ def main():
                         help="Store results in database")
     parser.add_argument('-o', '--output', metavar="FILE", type=str, default=None,
                         help="Output results to FILE instead of starting ncdu")
+    parser.add_argument('--debug-sql', action='store_true', default=False,
+                        help="Debug SQL queries")
     args = parser.parse_args()
 
-    db = Database(args.database or scatterbackup.util.make_default_database())
+    db = Database(args.database or scatterbackup.util.make_default_database(), args.debug_sql)
 
     # fileinfos = scatterbackup.sbtr.fileinfos_from_sbtr(args.FILE[0])
 
     # FIXME: do some benchmarking on glob vs directory table for tree retrieval
     # fileinfos = list(db.get_directory_by_path(os.path.abspath(args.FILE[0])))
+
+    print("gather fileinfos")
     fileinfos = list(db.get_by_glob(os.path.join(os.path.abspath(args.FILE[0]), "*")))
 
+    print("building .js data")
     ncdu_js = ncdu_from_fileinfos_with_header(fileinfos)
     if args.output is None:
         with tempfile.NamedTemporaryFile("w") as fout:
+            print("dumping .js")
             json.dump(ncdu_js, fp=fout)
             fout.flush()
+            print("calling ncdu")
             subprocess.call(["ncdu", "-f", fout.name])
     elif args.output == "-":
         json.dump(ncdu_js, fp=sys.stdout)
