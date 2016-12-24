@@ -26,6 +26,7 @@ class Config:
 
     def __init__(self):
         self.excludes = []
+        self.defaults = []
 
     def load(self, filename=None):
         if filename is None:
@@ -40,6 +41,7 @@ class Config:
                 cfg = yaml.load(fin)
 
             self.excludes = cfg.get("excludes", [])
+            self.defaults = cfg.get("defaults", [])
 
 
 # EOF #

@@ -247,7 +247,15 @@ def main():
                     i += 1
                 print("{} entries imported".format(i))
         else:
-            for path in (os.path.abspath(d) for d in args.PATH):
+            if args.PATH == []:
+                print("Using default directories from '~/.config/scatterbackup/config.yaml':")
+                paths = [os.path.abspath(d) for d in cfg.defaults]
+                for p in paths:
+                    print("  {}".format(p))
+            else:
+                paths = (os.path.abspath(d) for d in args.PATH)
+
+            for path in paths:
                 update = UpdateAction(db)
 
                 update.verbose = args.verbose
