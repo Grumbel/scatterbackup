@@ -39,7 +39,7 @@ def make_default_database():
 
 
 def make_cache_directory():
-    cache_dir = os.path.join(xdg.BaseDirectory.xdg_cache_home, "scatterbackup")
+    cache_dir = os.path.join(xdg.BaseDirectory.xdg_data_home, "scatterbackup")
 
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
