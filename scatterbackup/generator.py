@@ -81,11 +81,19 @@ def scan_fileinfos(path,
     for root, dirs, files in scan_directory(path, excludes, onerror):
         result_dirs = []
         for d in dirs:
-            result_dirs.append(FileInfo.from_file(d, checksums=checksums, relative=relative))
+            try:
+                result_dirs.append(FileInfo.from_file(d, checksums=checksums, relative=relative))
+            except OSError as err:
+                if onerror is not None:
+                    onerror(err)
 
         result_files = []
         for f in files:
-            result_files.append(FileInfo.from_file(f, checksums=checksums, relative=relative))
+            try:
+                result_files.append(FileInfo.from_file(f, checksums=checksums, relative=relative))
+            except OSError as err:
+                if onerror is not None:
+                    onerror(err)
 
         yield [root, result_dirs, result_files]
 
