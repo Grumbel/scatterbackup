@@ -43,7 +43,12 @@ setup(name='scatterbackup',
           ],
           'gui_scripts': []
           },
-      packages=['scatterbackup'])
+      packages=['scatterbackup'],
+      install_requires=[
+          'PyYAML',
+          'pyxdg',
+          'pyparsing'
+      ])
 
 
 # EOF #
