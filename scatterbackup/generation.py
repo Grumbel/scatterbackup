@@ -70,13 +70,18 @@ class GenerationRange:
                 raise Exception("invalid generation range: {}-{}".format(start, end))
 
         if dbrange is not None:
+            # handle negative generations
             if start is not None and start < 0:
                 start = dbrange.end + start
 
             if end is not None and end < 0:
                 end = dbrange.end + end
 
-        return GenerationRange(start, end)
+            gen = GenerationRange(start, end)
+            gen.clip_to(dbrange)
+            return gen
+        else:
+            return GenerationRange(start, end)
 
     def __init__(self, start, end, include_rule=INCLUDE_ALIVE):
         self.start = start

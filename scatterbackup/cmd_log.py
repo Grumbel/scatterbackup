@@ -203,9 +203,6 @@ def path_to_glob(path):
 def process_path(db, args, paths, gen_range):
     path_globs = [path_to_glob(os.path.abspath(path)) for path in paths]
 
-    dbrange = db.get_generations_range()
-    gen_range.clip_to(dbrange)
-
     for gen in range(gen_range.start, gen_range.end):
         grange = GenerationRange(gen, gen+1, GenerationRange.INCLUDE_CHANGED)
 
