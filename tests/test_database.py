@@ -63,6 +63,13 @@ class DatabaseTestCase(unittest.TestCase):
         self.assertEqual(results[0].path, os.path.abspath("tests/data/subdir/test.txt"))
         self.assertEqual(results[1].path, os.path.abspath("tests/data/test.txt"))
 
+        # check for cursor reuse
+        gen = self.db.get_by_glob(os.path.abspath("tests/*.txt"))
+        gen2 = self.db.get_by_glob(os.path.abspath("tests/*.txt"))
+        next(gen)
+        next(gen2)
+        next(gen)  # this will throw if the generator gets invalidaded by cursor reuse
+
     def test_get_all(self):
         results = list(self.db.get_all())
         self.assertEqual(len(results), 3)
