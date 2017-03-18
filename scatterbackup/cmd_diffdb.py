@@ -39,6 +39,8 @@ def diff(db, oldpath, newpath, excludes, verbose=False):
         path = os.path.relpath(oldfileinfo.path, oldpath)
 
         if path_excluded(path, excludes):
+            if verbose:
+                print("excluded {}".format(path))
             continue
 
         newfileinfo = db.get_one_by_path(os.path.join(newpath, path))
@@ -56,6 +58,8 @@ def diff(db, oldpath, newpath, excludes, verbose=False):
         path = os.path.relpath(newfileinfo.path, newpath)
 
         if path_excluded(path, excludes):
+            if verbose:
+                print("excluded {}".format(path))
             continue
 
         oldfileinfo = db.get_one_by_path(os.path.join(oldpath, path))
@@ -76,13 +80,15 @@ def parse_args():
                         help="Subpath to exclude")
     parser.add_argument('-v', '--verbose', action='store_true', default=False,
                         help="Be more verbose")
+    parser.add_argument('--debug-sql', action='store_true', default=False,
+                        help="Debug SQL queries")
     return parser.parse_args()
 
 
 def main():
     sb_init()
     args = parse_args()
-    db = Database(args.database or scatterbackup.util.make_default_database())
+    db = Database(args.database or scatterbackup.util.make_default_database(), args.debug_sql)
     diff(db,
          os.path.abspath(args.OLDPATH[0]),
          os.path.abspath(args.NEWPATH[0]),
