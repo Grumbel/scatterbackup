@@ -414,6 +414,8 @@ class Database:
         elif fileinfo.kind != "directory":
             print("mark_removed_recursive: must be a directory", fileinfo.path)
         else:
+            cur = self.con.cursor()
+
             # "WITH RECURSIVE" is *much* faster when we use a plain
             # value in the initial-select instead of this SELECT
             # statement
