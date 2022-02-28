@@ -4,3 +4,4 @@
 /scatterbackup.egg-info/
 __pycache__/
 /.pylint/
+/result
