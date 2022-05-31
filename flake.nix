@@ -2,10 +2,12 @@
   description = "Virtually concatenate files";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-21.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-22.05";
     flake-utils.url = "github:numtide/flake-utils";
 
     bytefmt.url = "github:Grumbel/python-bytefmt";
+    bytefmt.inputs.nixpkgs.follows = "nixpkgs";
+    bytefmt.inputs.flake-utils.follows = "flake-utils";
   };
 
   outputs = { self, nixpkgs, flake-utils, bytefmt }:
