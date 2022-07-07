@@ -1,39 +1,33 @@
 {
-  description = "Virtually concatenate files";
-
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-22.05";
     flake-utils.url = "github:numtide/flake-utils";
-
-    bytefmt.url = "github:Grumbel/python-bytefmt";
-    bytefmt.inputs.nixpkgs.follows = "nixpkgs";
-    bytefmt.inputs.flake-utils.follows = "flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils, bytefmt }:
+  outputs = { self, nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
+        pythonPackages = pkgs.python310Packages;
       in rec {
-        packages = flake-utils.lib.flattenTree {
-          scatterbackup = pkgs.python3Packages.buildPythonPackage rec {
+        packages = flake-utils.lib.flattenTree rec {
+          scatterbackup = pythonPackages.buildPythonPackage rec {
             pname = "scatterbackup";
             version = "0.1.0";
             src = nixpkgs.lib.cleanSource ./.;
             doCheck = false;
-            nativeBuildInputs = [
-              pkgs.python3Packages.flake8
-              pkgs.python3Packages.pylint
+            nativeBuildInputs = with pythonPackages; [
+              flake8
+              pylint
             ];
-            buildInputs = [
-              pkgs.python3Packages.pyparsing
-              pkgs.python3Packages.pyyaml
-              pkgs.python3Packages.pyxdg
-
-              bytefmt.defaultPackage.${system}
+            propagatedBuildInputs = with pythonPackages; [
+              pyparsing
+              pyyaml
+              pyxdg
             ];
-           };
+          };
+          default = scatterbackup;
         };
-        defaultPackage = packages.scatterbackup;
-      });
+      }
+    );
 }
