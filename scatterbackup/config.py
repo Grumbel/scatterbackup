@@ -38,7 +38,7 @@ class Config:
         else:
             logging.info("loading config file from %s", filename)
             with open(filename) as fin:
-                cfg = yaml.load(fin)
+                cfg = yaml.safe_load(fin)
 
             self.excludes = cfg.get("excludes", [])
             self.defaults = cfg.get("defaults", [])
