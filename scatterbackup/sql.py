@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-def sql_pretty_print(text):
+def sql_pretty_print(text: str) -> None:
     keywords = ["FROM",
                 "LEFT JOIN",
                 "INNER JOIN",
@@ -28,27 +28,27 @@ def sql_pretty_print(text):
     print(text)
 
 
-def WHERE(stmt):
+def WHERE(stmt: str) -> str:
     if stmt:
         return "WHERE " + stmt
     else:
         return ""
 
 
-def OR(*stmts):
+def OR(*stmts: str) -> str:
     if len(stmts) == 1:
         return stmts[0]
     else:
-        stmts = [stmt for stmt in stmts if stmt]
-        return " OR ".join("(" + stmt + ")" for stmt in stmts)
+        return " OR ".join("(" + stmt + ")"
+                           for stmt in [stmt for stmt in stmts if stmt])
 
 
-def AND(*stmts):
+def AND(*stmts: str) -> str:
     if len(stmts) == 1:
         return stmts[0]
     else:
-        stmts = [stmt for stmt in stmts if stmt]
-        return " AND ".join("(" + stmt + ")" for stmt in stmts)
+        return " AND ".join("(" + stmt + ")"
+                            for stmt in [stmt for stmt in stmts if stmt])
 
 
 # EOF #

@@ -15,6 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from typing import cast, Callable, Iterator, Optional, Sequence
+
 import os
 import fnmatch
 import logging
@@ -23,7 +25,7 @@ import scatterbackup
 from scatterbackup.fileinfo import FileInfo
 
 
-def match_excludes(path, excludes=None):
+def match_excludes(path: str, excludes: Optional[Sequence[str]] = None) -> bool:
     if excludes is not None:
         for pattern in excludes:
             if fnmatch.fnmatch(path, pattern):
@@ -31,9 +33,9 @@ def match_excludes(path, excludes=None):
     return False
 
 
-def scan_directory(path,
-                   excludes=None,
-                   onerror=None):
+def scan_directory(path: str,
+                   excludes: Optional[list[str]] = None,
+                   onerror: Optional[Callable[[OSError], None]] = None) -> Iterator[tuple[str, list[str], list[str]]]:
     """Wrapper around scatterbackup.walk() that applies a list of exclude
     directives and returns result as absolute path
     """
@@ -67,16 +69,17 @@ def scan_directory(path,
                     result_files.append(path)
             except OSError as err:
                 if onerror is not None:
-                    onerror(err)
+                    onerror(err)  # type: ignore
 
-        yield [root, result_dirs, result_files]
+        yield (cast(str, root), result_dirs, result_files)
 
 
-def scan_fileinfos(path,
-                   excludes=None,
-                   checksums=False,
-                   relative=False,
-                   onerror=None):
+def scan_fileinfos(path: str,
+                   excludes: Optional[list[str]] = None,
+                   checksums: bool = False,
+                   relative: bool = False,
+                   onerror: Optional[Callable[[OSError], None]] = None) \
+                   -> Iterator[tuple[str, list[FileInfo], list[FileInfo]]]:
 
     for root, dirs, files in scan_directory(path, excludes, onerror):
         result_dirs = []
@@ -93,14 +96,14 @@ def scan_fileinfos(path,
                 result_files.append(FileInfo.from_file(f, checksums=checksums, relative=relative))
             except OSError as err:
                 if onerror is not None:
-                    onerror(err)
+                    onerror(err)  # type: ignore
 
-        yield [root, result_dirs, result_files]
+        yield (root, result_dirs, result_files)
 
 
-def generate_files(path,
-                   excludes=None,
-                   onerror=None):
+def generate_files(path: str,
+                   excludes: Optional[Sequence[str]] = None,
+                   onerror: Optional[Callable[[OSError], None]] = None) -> Iterator[str]:
     """Generate a list of files and directories below path"""
 
     yield path
@@ -128,15 +131,15 @@ def generate_files(path,
                         yield path
                 except OSError as err:
                     if onerror is not None:
-                        onerror(err)
+                        onerror(err)  # type: ignore
 
 
-def generate_fileinfos(path,
-                       relative=False,
-                       prefix=None,
-                       onerror=None,
-                       excludes=None,
-                       checksums=False):
+def generate_fileinfos(path: str,
+                       relative: bool = False,
+                       prefix: Optional[str] = None,
+                       onerror: Optional[Callable[[OSError], None]] = None,
+                       excludes: Optional[Sequence[str]] = None,
+                       checksums: bool = False) -> Iterator[FileInfo]:
 
     for p in generate_files(path=path, onerror=onerror, excludes=excludes):
         try:

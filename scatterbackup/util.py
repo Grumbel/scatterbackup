@@ -15,6 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from typing import Any, Callable, Sequence, TypeVar, Iterator, Optional
+
 import io
 import os
 import sys
@@ -22,7 +24,10 @@ import logging
 import xdg.BaseDirectory
 
 
-def sb_init():
+T = TypeVar('T')
+
+
+def sb_init() -> None:
     # Python 3.5.2 still doesn't have "surrogateescape" enabled by
     # default on stdout/stderr, so we have to do it manually. Test with:
     #   print(os.fsdecode(b"\xff"))
@@ -32,13 +37,13 @@ def sb_init():
     logging.basicConfig(level=logging.DEBUG)
 
 
-def make_default_database():
+def make_default_database() -> str:
     cache_dir = make_cache_directory()
     db_file = os.path.join(cache_dir, "database1.sqlite3")
     return db_file
 
 
-def make_cache_directory():
+def make_cache_directory() -> str:
     cache_dir = os.path.join(xdg.BaseDirectory.xdg_data_home, "scatterbackup")
 
     if not os.path.exists(cache_dir):
@@ -47,7 +52,7 @@ def make_cache_directory():
     return cache_dir
 
 
-def make_config_directory():
+def make_config_directory() -> str:
     cache_dir = os.path.join(xdg.BaseDirectory.xdg_config_home, "scatterbackup")
 
     if not os.path.exists(cache_dir):
@@ -56,12 +61,12 @@ def make_config_directory():
     return cache_dir
 
 
-def split(pred, lst):
+def split(pred: Callable[[T], bool], lst: Sequence[T]) -> tuple[list[T], list[T]]:
     """Like filter(), but return two list, first one with the elements
     where pred() is True, second where it is False"""
 
-    lhs = []
-    rhs = []
+    lhs: list[Any] = []
+    rhs: list[Any] = []
 
     for el in lst:
         if pred(el):
@@ -72,33 +77,34 @@ def split(pred, lst):
     return (lhs, rhs)
 
 
-def full_join(lhs, rhs, key=lambda x: x):
+def full_join(lhs: Sequence[T], rhs: Sequence[T],
+              key: Callable[[T], Any] = lambda x: x) -> Iterator[tuple[Optional[T], Optional[T]]]:
     """Do a full outer join of two lists on key"""
 
     lhs = sorted(lhs, key=key)
     rhs = sorted(rhs, key=key)
 
-    l = 0
-    r = 0
+    lhs_idx = 0
+    rhs_idx = 0
 
-    while l < len(lhs) and r < len(rhs):
-        if key(lhs[l]) == key(rhs[r]):
-            yield (lhs[l], rhs[r])
-            l += 1
-            r += 1
-        elif key(lhs[l]) < key(rhs[r]):
-            yield (lhs[l], None)
-            l += 1
-        elif key(lhs[l]) > key(rhs[r]):
-            yield (None, rhs[r])
-            r += 1
+    while lhs_idx < len(lhs) and rhs_idx < len(rhs):
+        if key(lhs[lhs_idx]) == key(rhs[rhs_idx]):
+            yield (lhs[lhs_idx], rhs[rhs_idx])
+            lhs_idx += 1
+            rhs_idx += 1
+        elif key(lhs[lhs_idx]) < key(rhs[rhs_idx]):
+            yield (lhs[lhs_idx], None)
+            lhs_idx += 1
+        elif key(lhs[lhs_idx]) > key(rhs[rhs_idx]):
+            yield (None, rhs[rhs_idx])
+            rhs_idx += 1
         else:
             assert False, "Never reached"
 
-    for i in range(l, len(lhs)):
+    for i in range(lhs_idx, len(lhs)):
         yield (lhs[i], None)
 
-    for i in range(r, len(rhs)):
+    for i in range(rhs_idx, len(rhs)):
         yield (None, rhs[i])
 
 

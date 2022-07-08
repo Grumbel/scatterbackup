@@ -1,11 +1,12 @@
 import sys
 import datetime
 import zipfile
+
 from scatterbackup.fileinfo import FileInfo
-from scatterbackup.fileinfo import BlobInfo
+from scatterbackup.blobinfo import BlobInfo
 
 
-def main():
+def main() -> None:
     fileinfos = []
     with zipfile.ZipFile(sys.argv[1], 'r') as zp:
         for entry in zp.infolist():

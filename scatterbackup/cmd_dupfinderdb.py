@@ -23,7 +23,7 @@ import scatterbackup.util
 from scatterbackup.database import Database
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Find duplicate files')
     parser.add_argument('DIRECTORY', action='store', type=str, nargs=1,
                         help='directory containing the filese')
@@ -32,7 +32,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def main() -> None:
     scatterbackup.util.sb_init()
 
     args = parse_args()
@@ -44,6 +44,7 @@ def main():
         if i != 0:
             print()
         for fileinfo in dups:
+            assert fileinfo.blob is not None
             print("{}  {}".format(fileinfo.blob.sha1, fileinfo.path))
 
 # EOF #

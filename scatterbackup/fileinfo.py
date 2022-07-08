@@ -15,6 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from typing import Any, Optional
+
 import json
 import os
 import stat
@@ -26,82 +28,82 @@ from scatterbackup.blobinfo import BlobInfo
 
 class FileInfo:
 
-    def __init__(self, path):
-        self.rowid = None
+    def __init__(self, path: str) -> None:
+        self.rowid: Optional[int] = None
 
-        self.kind = None
-        self.path = path
+        self.kind: Optional[str] = None
+        self.path: str = path
 
-        self.dev = None  # FIXME: this is not stable across reboots
-        self.ino = None
+        self.dev: Optional[int] = None  # FIXME: this is not stable across reboots
+        self.ino: Optional[int] = None
 
-        self.mode = None
-        self.nlink = None
+        self.mode: Optional[int] = None
+        self.nlink: Optional[int] = None
 
-        self.uid = None
-        self.gid = None
+        self.uid: Optional[int] = None
+        self.gid: Optional[int] = None
 
-        self.rdev = None
+        self.rdev: Optional[int] = None
 
-        self.size = None
-        self.blksize = None
-        self.blocks = None
+        self.size: Optional[int] = None
+        self.blksize: Optional[int] = None
+        self.blocks: Optional[int] = None
 
-        self.atime = None
-        self.ctime = None
-        self.mtime = None
+        self.atime: Optional[float] = None
+        self.ctime: Optional[float] = None
+        self.mtime: Optional[float] = None
 
-        self.time = None
+        self.time: Optional[float] = None
 
-        self.birth = None
-        self.death = None
+        self.birth: Optional[int] = None
+        self.death: Optional[int] = None
 
-        self.blob = None
-        self.target = None
+        self.blob: Optional[BlobInfo] = None
+        self.target: Optional[str] = None
 
-        self.directory_id = None
+        self.directory_id: Optional[int] = None
 
-    def __eq__(self, other):
-        if type(other) is type(self):
-            return (
-                self.kind == other.kind and
-                self.path == other.path and
-
-                # dev does not stay permanent across reboots
-                # self.dev == other.dev and
-                self.ino == other.ino and
-
-                self.mode == other.mode and
-                self.nlink == other.nlink and
-
-                self.uid == other.uid and
-                self.gid == other.gid and
-
-                self.rdev == other.rdev and
-
-                self.size == other.size and
-                self.blksize == other.blksize and
-                self.blocks == other.blocks and
-
-                # atime creates to much bloat in db if each change is recorded
-                # self.atime == other.atime and
-
-                self.ctime == other.ctime and
-                self.mtime == other.mtime and
-
-                # creation time of the FileInfo is not relevant
-                # self.time == other.time and
-
-                self.blob == other.blob and
-                self.target == other.target)
-        else:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, FileInfo):
             return False
 
-    def to_js_dict(self):
+        return (
+            self.kind == other.kind and
+            self.path == other.path and
+
+            # dev does not stay permanent across reboots
+            # self.dev == other.dev and
+            self.ino == other.ino and
+
+            self.mode == other.mode and
+            self.nlink == other.nlink and
+
+            self.uid == other.uid and
+            self.gid == other.gid and
+
+            self.rdev == other.rdev and
+
+            self.size == other.size and
+            self.blksize == other.blksize and
+            self.blocks == other.blocks and
+
+            # atime creates to much bloat in db if each change is recorded
+            # self.atime == other.atime and
+
+            self.ctime == other.ctime and
+            self.mtime == other.mtime and
+
+            # creation time of the FileInfo is not relevant
+            # self.time == other.time and
+
+            self.blob == other.blob and
+            self.target == other.target)
+
+    def to_js_dict(self) -> OrderedDict[str, Any]:
         # use OrderedDict to create pretty and deterministic output
         js = OrderedDict()
 
-        def assign(name, value):
+        def assign(name: str, value: Any) -> None:
             if value is not None:
                 js[name] = value
 
@@ -130,11 +132,11 @@ class FileInfo:
         if self.blob is not None:
             js['blob'] = OrderedDict([('size', self.size)])
             if self.blob.sha1 is not None:
-                js['blob']['sha1'] = self.blob.sha1
+                js['blob']['sha1'] = self.blob.sha1  # type: ignore
             if self.blob.md5 is not None:
-                js['blob']['md5'] = self.blob.md5
+                js['blob']['md5'] = self.blob.md5  # type: ignore
             if self.blob.crc32 is not None:
-                js['blob']['crc32'] = self.blob.crc32
+                js['blob']['crc32'] = self.blob.crc32  # type: ignore
 
         assign('target', self.target)
 
@@ -142,17 +144,17 @@ class FileInfo:
 
         return js
 
-    def json(self):
+    def json(self) -> str:
         js = self.to_js_dict()
         return json.dumps(js)
 
-    def calc_checksums(self):
+    def calc_checksums(self) -> None:
         statinfo = os.lstat(self.path)
         if stat.S_ISREG(statinfo.st_mode):
             self.blob = BlobInfo.from_file(self.path)
 
     @staticmethod
-    def from_file(path, checksums=True, relative=False):
+    def from_file(path: str, checksums: bool = True, relative: bool = False, base: Optional[str] = None) -> 'FileInfo':
         abspath = path if relative else os.path.abspath(path)
 
         result = FileInfo(abspath)
@@ -206,7 +208,7 @@ class FileInfo:
         return result
 
     @staticmethod
-    def from_json(text):
+    def from_json(text: str) -> 'FileInfo':
         js = json.loads(text)
         path = js.get('path')
 
@@ -244,7 +246,7 @@ class FileInfo:
 
         return result
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "FileInfo({!r})".format(self.path)
 
 

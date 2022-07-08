@@ -22,7 +22,7 @@ from scatterbackup.generation import GenerationRange
 
 class GeneratorTestCase(unittest.TestCase):
 
-    def test_generation_range(self):
+    def test_generation_range(self) -> None:
         self.assertEqual(GenerationRange.from_string("10:20"), GenerationRange(10, 20))
         self.assertEqual(GenerationRange.from_string(":20"), GenerationRange(None, 20))
         self.assertEqual(GenerationRange.from_string("10:"), GenerationRange(10, None))

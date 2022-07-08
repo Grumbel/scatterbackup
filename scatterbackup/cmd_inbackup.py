@@ -23,9 +23,10 @@ import shlex
 import scatterbackup
 import scatterbackup.util
 from scatterbackup.database import Database
+from scatterbackup.fileinfo import FileInfo
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Check if file is in backup')
     parser.add_argument('FILE', action='store', type=str, nargs='+',
                         help='Files to check')
@@ -36,8 +37,8 @@ def parse_args():
     return parser.parse_args()
 
 
-def fileinfos_from_path(db, path):
-    fileinfos = []
+def fileinfos_from_path(db: Database, path: str) -> list[FileInfo]:
+    fileinfos: list[FileInfo] = []
 
     if not os.path.isdir(path):
         print("{}: warning: not a directory, ignoring".format(path), file=sys.stderr)
@@ -52,9 +53,11 @@ def fileinfos_from_path(db, path):
     return fileinfos
 
 
-def is_in_backup(fileinfo, backup):
+def is_in_backup(fileinfo: FileInfo, backup: list[FileInfo]) -> None:
     found = False
     for b in backup:
+        assert b.blob is not None
+        assert fileinfo.blob is not None
         if b.blob.sha1 == fileinfo.blob.sha1:
             print("mv -vi {} {}".format(shlex.quote(fileinfo.path), "dup/"))
             # print("INBACKUP: {} -> {}".format(fileinfo.path, b.path))
@@ -64,21 +67,21 @@ def is_in_backup(fileinfo, backup):
         print("NOTINBACKUP: {}".format(fileinfo.path))
 
 
-def main():
+def main() -> None:
     scatterbackup.util.sb_init()
 
     args = parse_args()
     db = Database(args.database or scatterbackup.util.make_default_database())
 
     files = [os.path.abspath(p) for p in args.FILE]
-    fileinfos = []
+    fileinfos: list[FileInfo] = []
     for f in files:
         result = list(db.get_by_path(f))
         if result == []:
             print("{}: warning: not in database, ignoring".format(f), file=sys.stderr)
         fileinfos += result
 
-    backup_fileinfos = []
+    backup_fileinfos: list[FileInfo] = []
     for p in args.backup:
         backup_fileinfos += fileinfos_from_path(db, os.path.abspath(p))
 

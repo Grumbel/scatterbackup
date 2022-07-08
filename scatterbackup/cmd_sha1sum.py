@@ -20,7 +20,7 @@ import argparse
 import scatterbackup.sbtr
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description='Convert .sbtr to sha1sum syntax')
     parser.add_argument('FILE', action='store', type=str, nargs=1,
                         help='.sbtr file to load')

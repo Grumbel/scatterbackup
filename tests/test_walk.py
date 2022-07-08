@@ -24,7 +24,7 @@ import scatterbackup
 
 class UtilTestCase(unittest.TestCase):
 
-    def test_walk(self):
+    def test_walk(self) -> None:
         result = list(scatterbackup.walk("tests/data"))
         expected = [('tests/data',
                      ['subdir'],

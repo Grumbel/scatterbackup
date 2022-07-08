@@ -23,25 +23,25 @@ from scatterbackup.generator import generate_fileinfos, scan_directory, scan_fil
 
 class GeneratorTestCase(unittest.TestCase):
 
-    def test_generator(self):
+    def test_generator(self) -> None:
         output = ""
         for fileinfo in generate_fileinfos("tests/"):
             output += fileinfo.json()
         # FIXME: insert some proper check for validity
         self.assertTrue(True)
 
-    def test_scan_directory(self):
+    def test_scan_directory(self) -> None:
         results = list(scan_directory("tests/data/"))
-        expected = [[os.path.abspath('tests/data'),
+        expected = [(os.path.abspath('tests/data'),
                      [os.path.abspath('tests/data/subdir')],
                      [os.path.abspath('tests/data/test.txt'),
-                      os.path.abspath('tests/data/symlink.lnk')]],
-                    [os.path.abspath('tests/data/subdir'),
+                      os.path.abspath('tests/data/symlink.lnk')]),
+                    (os.path.abspath('tests/data/subdir'),
                      [],
-                     [os.path.abspath('tests/data/subdir/test.txt')]]]
+                     [os.path.abspath('tests/data/subdir/test.txt')])]
         self.assertEqual(results, expected)
 
-    def test_scan_fileinfos(self):
+    def test_scan_fileinfos(self) -> None:
         # pylint: disable=locally-disabled, no-self-use
         for root, dirs, files in scan_fileinfos("tests/data/"):
             for d in dirs:

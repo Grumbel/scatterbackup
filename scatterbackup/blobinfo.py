@@ -15,20 +15,26 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from typing import Optional
+
 import hashlib
 import zlib
 
 
 class BlobInfo:
 
-    def __init__(self, size, md5=None, sha1=None, crc32=None):
-        self.size = size
-        self.sha1 = sha1
-        self.md5 = md5
-        self.crc32 = crc32
+    def __init__(self,
+                 size: int,
+                 md5: Optional[str] = None,
+                 sha1: Optional[str] = None,
+                 crc32: Optional[int] = None) -> None:
+        self.size: int = size
+        self.sha1: Optional[str] = sha1
+        self.md5: Optional[str] = md5
+        self.crc32: Optional[int] = crc32
 
-    def __eq__(self, other):
-        if other is None:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, BlobInfo):
             return False
 
         sha1_ok = ((self.sha1 is not None and other.sha1 is not None) and
@@ -41,12 +47,12 @@ class BlobInfo:
         return (self.size == other.size and
                 (sha1_ok or md5_ok or crc32_ok))
 
-    def is_complete(self):
+    def is_complete(self) -> bool:
         return (self.sha1 is not None and
                 self.md5 is not None)
 
     @staticmethod
-    def from_file(path):
+    def from_file(path: str) -> 'BlobInfo':
         """Calculate size, md5 and sha1 for a given file"""
         size = 0
         md5 = hashlib.md5()

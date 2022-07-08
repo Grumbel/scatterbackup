@@ -25,7 +25,7 @@ from scatterbackup.fileinfo import FileInfo
 
 class VFSTestCase(unittest.TestCase):
 
-    def test_foobar(self):
+    def test_foobar(self) -> None:
         vfs = scatterbackup.vfs.VFS()
         vfs.add(FileInfo("/foo/bar.txt"))
         vfs.add(FileInfo("/foo/foo.zip"))

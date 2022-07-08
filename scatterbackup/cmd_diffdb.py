@@ -15,25 +15,28 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from typing import Iterator, Sequence
+
 import argparse
 import os
-import scatterbackup.sbtr
-from scatterbackup.util import sb_init
+
+from scatterbackup.util import sb_init, make_default_database
 from scatterbackup.database import Database
+from scatterbackup.fileinfo import FileInfo
 
 
-def path_excluded(path, excludes):
+def path_excluded(path: str, excludes: Sequence[str]) -> bool:
     for ex in excludes:
         if path.startswith(ex):
             return True
     return False
 
 
-def diff(db, oldpath, newpath, excludes, verbose=False):
+def diff(db: Database, oldpath: str, newpath: str, excludes: list[str], verbose: bool = False) -> None:
     oldglob = os.path.join(oldpath, '*')
     newglob = os.path.join(newpath, '*')
 
-    oldfileinfos = db.get_by_glob(oldglob)
+    oldfileinfos: Iterator[FileInfo] = db.get_by_glob(oldglob)
 
     for oldfileinfo in oldfileinfos:
         path = os.path.relpath(oldfileinfo.path, oldpath)
@@ -62,13 +65,12 @@ def diff(db, oldpath, newpath, excludes, verbose=False):
                 print("excluded {}".format(path))
             continue
 
-        oldfileinfo = db.get_one_by_path(os.path.join(oldpath, path))
-
-        if oldfileinfo is None:
+        old_fileinfo = db.get_one_by_path(os.path.join(oldpath, path))
+        if old_fileinfo is None:
             print("added {}".format(path))
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Compare two .sbtr files')
     parser.add_argument('OLDPATH', action='store', type=str, nargs=1,
                         help='old subtree')
@@ -85,10 +87,10 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def main() -> None:
     sb_init()
     args = parse_args()
-    db = Database(args.database or scatterbackup.util.make_default_database(), args.debug_sql)
+    db = Database(args.database or make_default_database(), args.debug_sql)
     diff(db,
          os.path.abspath(args.OLDPATH[0]),
          os.path.abspath(args.NEWPATH[0]),

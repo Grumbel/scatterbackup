@@ -24,13 +24,13 @@ from scatterbackup.util import full_join, split
 
 class UtilTestCase(unittest.TestCase):
 
-    def test_split(self):
+    def test_split(self) -> None:
         lst = [2, 1, 4, 3, 5]
         result = split(lambda x: x < 4, lst)
         self.assertEqual(result[0], [2, 1, 3])
         self.assertEqual(result[1], [4, 5])
 
-    def test_full_join(self):
+    def test_full_join(self) -> None:
         lhs = [2, 1, 4, 3, 5]
         rhs = [7, 5, 4, 6, 3]
         result = list(full_join(lhs, rhs))

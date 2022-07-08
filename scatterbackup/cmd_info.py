@@ -23,7 +23,7 @@ import scatterbackup.config
 import scatterbackup.util
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Collect FileInfo')
     parser.add_argument('-v', '--verbose', action='store_true', default=False,
                         help="be more verbose")
@@ -34,7 +34,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def main() -> None:
     sb_init()
 
     args = parse_args()

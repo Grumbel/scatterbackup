@@ -15,27 +15,30 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from typing import Any, Optional
+
 import os
 import stat
 import datetime
 from pwd import getpwuid
 from grp import getgrgid
 
-from scatterbackup.units import bytes2human_decimal, bytes2human_binary, units
+from scatterbackup.fileinfo import FileInfo
 from scatterbackup.time import format_time
+from scatterbackup.units import bytes2human_decimal, bytes2human_binary, units
 
 
 class Bytes:
 
-    def __init__(self, count):
+    def __init__(self, count: int) -> None:
         self.count = count
 
-    def __format__(self, spec):
+    def __format__(self, spec: str) -> str:
         r = spec.rsplit(":", maxsplit=1)
         str_spec, unit = r if len(r) == 2 else (r[0], "h")
         return format(self.as_str(unit), str_spec)
 
-    def as_str(self, unit):
+    def as_str(self, unit: str) -> str:
         if unit == "h":
             return bytes2human_decimal(self.count)
         elif unit == "H":
@@ -52,10 +55,10 @@ class Bytes:
 
 class Checksum:
 
-    def __init__(self, checksum):
+    def __init__(self, checksum: str) -> None:
         self.checksum = checksum
 
-    def __format__(self, spec):
+    def __format__(self, spec: str) -> str:
         r = spec.rsplit(":", maxsplit=1)
         if len(r) == 2:
             str_spec = r[0]
@@ -69,16 +72,16 @@ class Checksum:
 
 class Time:
 
-    def __init__(self, time):
+    def __init__(self, time: Optional[float]) -> None:
         self.time = time
 
-    def __format__(self, spec):
+    def __format__(self, spec: str) -> str:
         r = spec.rsplit(":", maxsplit=1)
         str_spec, time_spec = r if len(r) == 2 else (r[0], "h")
 
         return format(self.as_str(time_spec), str_spec)
 
-    def as_str(self, spec):
+    def as_str(self, spec: str) -> str:
         if spec == 'r':
             return str(self.time)
         elif spec == 'iso' or spec == 'i':
@@ -99,21 +102,21 @@ class Time:
 
 class Mode:
 
-    def __init__(self, mode):
+    def __init__(self, mode: int) -> None:
         self.mode = mode
 
-    def __format__(self, spec):
+    def __format__(self, spec: str) -> str:
         r = spec.rsplit(":", maxsplit=1)
         str_spec, spec = r if len(r) == 2 else (r[0], "h")
         return format(self.as_str(spec), str_spec)
 
-    def as_str(self, spec):
+    def as_str(self, spec: str) -> str:
         if spec == 'h':
             return self.as_str_human()
         else:
             return str(self.mode)
 
-    def as_str_human(self):
+    def as_str_human(self) -> str:
         mode = self.mode
         s = ""
 
@@ -183,99 +186,110 @@ class Mode:
 
 class RelPath:
 
-    def __init__(self, path):
+    def __init__(self, path: str) -> None:
         self.path = path
 
-    def __format__(self, spec):
+    def __format__(self, spec: str) -> str:
         r = spec.rsplit(":", maxsplit=1)
         str_spec, spec = r if len(r) == 2 else (r[0], "")
         return format(self.as_str(spec), str_spec)
 
-    def as_str(self, spec):
+    def as_str(self, spec: str) -> str:
         return os.path.relpath(self.path, spec)
 
 
 class FileInfoFormatter:
 
-    def __init__(self, fileinfo):
-        self.fileinfo = fileinfo
+    def __init__(self, fileinfo: FileInfo) -> None:
+        self.fileinfo: FileInfo = fileinfo
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
         # FIXME: potential security hole
         return self.__getattribute__(key)()
 
-    def path(self):
+    def path(self) -> str:
         return self.fileinfo.path
 
-    def relpath(self):
+    def relpath(self) -> RelPath:
         return RelPath(self.fileinfo.path)
 
-    def dev(self):
+    def dev(self) -> Optional[int]:
         return self.fileinfo.dev
 
-    def ino(self):
+    def ino(self) -> Optional[int]:
         return self.fileinfo.ino
 
-    def mode(self):
+    def mode(self) -> Mode:
+        assert self.fileinfo.mode is not None
         return Mode(self.fileinfo.mode)
 
-    def nlink(self):
+    def nlink(self) -> Optional[int]:
         return self.fileinfo.nlink
 
-    def uid(self):
+    def uid(self) -> Optional[int]:
         return self.fileinfo.uid
 
-    def gid(self):
+    def gid(self) -> Optional[int]:
         return self.fileinfo.gid
 
-    def owner(self):
+    def owner(self) -> str:
+        assert self.fileinfo.uid is not None
         try:
             return getpwuid(self.fileinfo.uid).pw_name  # FIXME: maybe cache this?
-        except KeyError as err:
+        except KeyError:
             return str(self.fileinfo.uid)
 
-    def group(self):
+    def group(self) -> str:
+        assert self.fileinfo.gid is not None
         try:
             return getgrgid(self.fileinfo.gid).gr_name  # FIXME: maybe cache this?
-        except KeyError as err:
+        except KeyError:
             return str(self.fileinfo.gid)
 
-    def rdev(self):
+    def rdev(self) -> int:
+        assert self.fileinfo.rdev is not None
         return self.fileinfo.rdev
 
-    def size(self):
+    def size(self) -> Bytes:
+        assert self.fileinfo.size is not None
         return Bytes(self.fileinfo.size)
 
-    def blksize(self):
+    def blksize(self) -> Optional[int]:
         return self.fileinfo.blksize
 
-    def blocks(self):
+    def blocks(self) -> Optional[int]:
         return self.fileinfo.blocks
 
-    def atime(self):
+    def atime(self) -> Time:
         return Time(self.fileinfo.atime)
 
-    def ctime(self):
+    def ctime(self) -> Time:
         return Time(self.fileinfo.ctime)
 
-    def mtime(self):
+    def mtime(self) -> Time:
         return Time(self.fileinfo.mtime)
 
-    def time(self): return Time(self.fileinfo.time)
+    def time(self) -> Time:
+        return Time(self.fileinfo.time)
 
-    def birth(self):
+    def birth(self) -> Optional[float]:
         return self.fileinfo.birth
 
-    def death(self):
+    def death(self) -> Optional[float]:
         return self.fileinfo.death
 
-    def sha1(self):
+    def sha1(self) -> Checksum:
+        assert self.fileinfo.blob is not None
+        assert self.fileinfo.blob.sha1 is not None
         return Checksum(self.fileinfo.blob.sha1 if self.fileinfo.blob else "<sha1:unknown>")
 
-    def md5(self):
+    def md5(self) -> Checksum:
+        assert self.fileinfo.blob is not None
+        assert self.fileinfo.blob.md5 is not None
         return Checksum(self.fileinfo.blob.md5 if self.fileinfo.blob else "<md5:unknown>")
 
-    def target(self):
+    def target(self) -> str:
+        assert self.fileinfo.target is not None
         return self.fileinfo.target
 
 

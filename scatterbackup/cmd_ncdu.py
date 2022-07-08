@@ -15,6 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from typing import Any, Sequence
+
 import argparse
 import json
 import os
@@ -23,10 +25,9 @@ import time
 import subprocess
 import tempfile
 
-from scatterbackup.util import sb_init
+from scatterbackup.util import sb_init, make_default_database
 from scatterbackup.database import Database
-import scatterbackup.sbtr
-
+from scatterbackup.fileinfo import FileInfo
 
 # st_dev is included when it changes
 # root directory contains full path
@@ -39,22 +40,28 @@ import scatterbackup.sbtr
 #   {"name":"bar","ino":2203948}],
 
 
-def ncdu_directory(node):
+NcduFileNode = dict[str, Any]
+NcduDirNode = list[Any]
+NcduRoot = list[Any]
+
+
+def ncdu_directory(node: FileInfo) -> NcduDirNode:
     return [{"name": os.path.basename(node.path),
              "asize": 0,
              "dev": node.dev,
              "ino": node.ino}]
 
 
-def ncdu_fake_directory(name):
+def ncdu_fake_directory(name: str) -> NcduDirNode:
     return [{"name": os.path.basename(name) or "/",
              "asize": 0,
              "dev": 0,
              "ino": 0}]
 
 
-def ncdu_file(node):
+def ncdu_file(node: FileInfo) -> NcduFileNode:
     if node.kind == "file":
+        assert node.blocks is not None
         return {"name": os.path.basename(node.path),
                 "asize": node.size,
                 "dsize": node.blocks * 512,
@@ -65,7 +72,7 @@ def ncdu_file(node):
                 "notreg": True}
 
 
-def ncdu_from_fileinfos_with_header(fileinfos):
+def ncdu_from_fileinfos_with_header(fileinfos: Sequence[FileInfo]) -> NcduRoot:
     return [1, 0,
             {"progname": "scatterbackup",
              "progver": "1.10",
@@ -73,7 +80,7 @@ def ncdu_from_fileinfos_with_header(fileinfos):
             ncdu_from_fileinfos(fileinfos)]
 
 
-def build_hierachy(directories):
+def build_hierachy(directories: dict[str, NcduDirNode]) -> None:
     nodes_without_parent = list(directories.items())
 
     while nodes_without_parent != []:
@@ -94,7 +101,7 @@ def build_hierachy(directories):
             parent_node.append(node)
 
 
-def get_node_or_fake(directories, dname):
+def get_node_or_fake(directories: dict[str, NcduDirNode], dname: str) -> NcduDirNode:
     node = directories.get(dname)
 
     if node is not None:
@@ -105,7 +112,7 @@ def get_node_or_fake(directories, dname):
         return node
 
 
-def collapse_empty_dirs(directories):
+def collapse_empty_dirs(directories: dict[str, NcduDirNode]) -> NcduDirNode:
     dname = "/"
     node = directories[dname]
 
@@ -117,10 +124,10 @@ def collapse_empty_dirs(directories):
     return node
 
 
-def ncdu_from_fileinfos(fileinfos):
+def ncdu_from_fileinfos(fileinfos: Sequence[FileInfo]) -> NcduDirNode:
     dir_fileinfos = (f for f in fileinfos if f.kind == "directory")
     file_fileinfos = (f for f in fileinfos if f.kind != "directory")
-    directories = {d.path: ncdu_directory(d) for d in dir_fileinfos}
+    directories: dict[str, NcduDirNode] = {d.path: ncdu_directory(d) for d in dir_fileinfos}
 
     # attach all the files to their directories or fake directories
     for fileinfo in file_fileinfos:
@@ -135,7 +142,7 @@ def ncdu_from_fileinfos(fileinfos):
     return root
 
 
-def main():
+def main() -> None:
     sb_init()
 
     parser = argparse.ArgumentParser(description='Convert .sbtr to ncdu syntax')
@@ -149,7 +156,7 @@ def main():
                         help="Debug SQL queries")
     args = parser.parse_args()
 
-    db = Database(args.database or scatterbackup.util.make_default_database(), args.debug_sql)
+    db = Database(args.database or make_default_database(), args.debug_sql)
 
     # fileinfos = scatterbackup.sbtr.fileinfos_from_sbtr(args.FILE[0])
 

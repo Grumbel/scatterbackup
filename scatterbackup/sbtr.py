@@ -19,6 +19,8 @@
 """
 
 
+from typing import cast, IO
+
 import sys
 import io
 import os
@@ -26,18 +28,19 @@ import gzip
 
 import scatterbackup
 from scatterbackup.generator import generate_fileinfos
+from scatterbackup.fileinfo import FileInfo
 
 
-def open_sbtr(filename):
+def open_sbtr(filename: str) -> IO[str]:
     if filename == "-":
         return sys.stdin
     elif filename.endswith(".gz"):
-        return io.TextIOWrapper(gzip.open(filename, "r"))
+        return io.TextIOWrapper(cast(IO[bytes], gzip.open(filename, "r")))
     else:
         return open(filename, "r")
 
 
-def fileinfos_from_sbtr(filename):
+def fileinfos_from_sbtr(filename: str) -> dict[str, FileInfo]:
     """Read FileInfo objects from .sbtr file or from compressed .sbtr.gz file"""
     result = {}
     with open_sbtr(filename) as fin:
@@ -47,7 +50,7 @@ def fileinfos_from_sbtr(filename):
     return result
 
 
-def fileinfos_from_path(path, checksums=True, relative=False):
+def fileinfos_from_path(path: str, checksums: bool = True, relative: bool = False) -> dict[str, FileInfo]:
     """Read FileInfo objects from path, which can be a .sbtr, .sbtr.gz or directory"""
     if os.path.isdir(path):
         return {fileinfo.path: fileinfo for

@@ -15,6 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from typing import cast, Any, Callable, Sequence
+
 import os
 import argparse
 import datetime
@@ -26,14 +28,16 @@ import scatterbackup.util
 import scatterbackup.config
 import scatterbackup.database
 import scatterbackup.time
-from scatterbackup.time import format_time
-from scatterbackup.util import sb_init, split
-from scatterbackup.units import bytes2human_decimal
-from scatterbackup.generation import GenerationRange
+from scatterbackup.database import Database
+from scatterbackup.fileinfo import FileInfo
 from scatterbackup.format import Time, Bytes
+from scatterbackup.generation import GenerationRange
+from scatterbackup.time import format_time
+from scatterbackup.units import bytes2human_decimal
+from scatterbackup.util import sb_init, split
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Collect FileInfo')
     parser.add_argument('PATH', action='store', type=str, nargs='*',
                         help='PATH to log')
@@ -52,7 +56,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def compare_fileinfo(old, new):
+def compare_fileinfo(old: FileInfo, new: FileInfo) -> str:
     changes = []
 
     if old.kind != new.kind:
@@ -74,6 +78,8 @@ def compare_fileinfo(old, new):
         changes.append("gid: {} -> {}".format(old.gid, new.gid))
 
     if old.size != new.size:
+        assert new.size is not None
+        assert old.size is not None
         bytes_diff = new.size - old.size
         if bytes_diff < 0:
             sign = "-"
@@ -82,9 +88,13 @@ def compare_fileinfo(old, new):
         changes.append("size: {}{}".format(sign, Bytes(abs(bytes_diff))))
 
     if old.blksize != new.blksize:
+        assert new.blksize is not None
+        assert old.blksize is not None
         changes.append("blksize: {}".format(new.blksize - old.blksize))
 
     if old.blocks != new.blocks:
+        assert new.blocks is not None
+        assert old.blocks is not None
         changes.append("blocks: {}".format(new.blocks - old.blocks))
 
     # to much noise
@@ -103,48 +113,52 @@ def compare_fileinfo(old, new):
     return ", ".join(changes)
 
 
-def gather_changed(fileinfos):
-    by_path = defaultdict(list)
+def gather_changed(fileinfos: Sequence[FileInfo]) -> tuple[list[tuple[FileInfo, FileInfo, str]], list[FileInfo]]:
+    by_path: defaultdict[str, list[FileInfo]] = defaultdict(list)
     for fi in fileinfos:
         by_path[fi.path].append(fi)
 
-    changed, rest = split(lambda fs: len(fs) != 1,
-                          by_path.values())
-    rest = [fi[0] for fi in rest]
+    rest: list[list[FileInfo]]
+    changed: list[list[FileInfo]]
+    changed, rest = split(cast(Callable[[list[FileInfo]], bool],
+                               lambda fs: len(fs) != 1),
+                          list(by_path.values()))
 
-    results = []
+    results: list[tuple[FileInfo, FileInfo, str]] = []
     for group in changed:
-        old = min(group, key=lambda fi: fi.birth)
-        new = max(group, key=lambda fi: fi.birth)
+        old = min(group, key=cast(Callable[[FileInfo], int], lambda fi: fi.birth))
+        new = max(group, key=cast(Callable[[FileInfo], int], lambda fi: fi.birth))
         results.append((old, new, compare_fileinfo(old, new)))
 
-    return results, rest
+    return results, [fi[0] for fi in rest]
 
 
-def gather_renamed(fileinfos):
+def gather_renamed(fileinfos: Sequence[FileInfo]) -> tuple[list[tuple[FileInfo, FileInfo]], list[FileInfo]]:
     by_ino = defaultdict(list)
     for fi in fileinfos:
         by_ino[fi.ino].append(fi)
 
-    renamed, rest = split(lambda fs: len(fs) != 1,
-                          by_ino.values())
-    rest = [fi[0] for fi in rest]
+    renamed: list[list[FileInfo]]
+    rest: list[list[FileInfo]]
+    renamed, rest = split(cast(Callable[[list[FileInfo]], bool],
+                               lambda fs: len(fs) != 1),
+                          list(by_ino.values()))
 
-    results = []
+    results: list[tuple[FileInfo, FileInfo]] = []
     for group in renamed:
-        old = min(group, key=lambda fi: fi.birth)
-        new = max(group, key=lambda fi: fi.birth)
+        old = min(group, key=cast(Callable[[FileInfo], int], lambda fi: fi.birth))
+        new = max(group, key=cast(Callable[[FileInfo], int], lambda fi: fi.birth))
         results.append((old, new))
 
-    return results, rest
+    return results, [fi[0] for fi in rest]
 
 
-def gather_added_deleted(fileinfos, gen):
-    return split(lambda fs: fs.birth == gen,
+def gather_added_deleted(fileinfos: Sequence[FileInfo], gen: int) -> tuple[list[FileInfo], list[FileInfo]]:
+    return split(cast(Callable[[FileInfo], bool], lambda fs: fs.birth == gen),
                  fileinfos)
 
 
-def build_report(fileinfos, gen):
+def build_report(fileinfos: Sequence[FileInfo], gen: int) -> list[tuple[str, Any]]:
     changed, fileinfos = gather_changed(fileinfos)
     renamed, fileinfos = gather_renamed(fileinfos)
     added, deleted = gather_added_deleted(fileinfos, gen)
@@ -155,12 +169,15 @@ def build_report(fileinfos, gen):
         (("renamed", g) for g in renamed),
         (("added", g) for g in added))
 
-    return report
+    return list(report)
 
 
-def print_report(report):
-    report = sorted(report, key=lambda g: g[1][0].path if isinstance(g[1], tuple) else g[1].path)
+def print_report(report: Sequence[tuple[str, FileInfo]]) -> None:
+    report = sorted(report,
+                    key=cast(Callable[[tuple[str, FileInfo]], str],
+                             lambda g: g[1][0].path if isinstance(g[1], tuple) else g[1].path))
 
+    g: Any
     for status, g in report:
         if status == "changed":
             if g[0].blob == g[1].blob:
@@ -182,7 +199,9 @@ def print_report(report):
             logging.error("unknown status: '%s' for %s", status, g)
 
 
-def print_fileinfo(status, fileinfo):
+def print_fileinfo(status: str, fileinfo: FileInfo) -> None:
+    assert fileinfo.size is not None
+
     print("{:8} {:>10}  {}  {}"
           .format(status,
                   # fileinfo.ino,
@@ -191,7 +210,7 @@ def print_fileinfo(status, fileinfo):
                   fileinfo.path))
 
 
-def path_to_glob(path):
+def path_to_glob(path: str) -> str:
     # FIXME: This heuristic to automatically generate a pattern for
     # the database query is a bit primitive
     if os.path.isdir(path):
@@ -200,9 +219,11 @@ def path_to_glob(path):
         return path
 
 
-def process_path(db, args, paths, gen_range):
+def process_path(db: Database, args: argparse.Namespace, paths: list[str], gen_range: GenerationRange) -> None:
     path_globs = [path_to_glob(os.path.abspath(path)) for path in paths]
 
+    assert gen_range.start is not None
+    assert gen_range.end is not None
     for gen in range(gen_range.start, gen_range.end):
         grange = GenerationRange(gen, gen+1, GenerationRange.INCLUDE_CHANGED)
 
@@ -226,7 +247,7 @@ def process_path(db, args, paths, gen_range):
             print_report(report)
 
 
-def print_generations(db, args, gen_range):
+def print_generations(db: Database, args: argparse.Namespace, gen_range: GenerationRange) -> None:
     generations = db.get_generations(gen_range)
     for gen in generations:
         print("{}  {}  {}  {}  {}".format(gen.generation,
@@ -238,7 +259,7 @@ def print_generations(db, args, gen_range):
                                           gen.command))
 
 
-def main():
+def main() -> None:
     sb_init()
 
     args = parse_args()

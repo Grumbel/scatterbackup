@@ -15,19 +15,22 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from typing import Callable, Optional
+
 import argparse
 import os
 import sys
 
 import scatterbackup
 import scatterbackup.util
-from scatterbackup.util import sb_init
 from scatterbackup.database import Database
+from scatterbackup.fileinfo import FileInfo
 from scatterbackup.format import FileInfoFormatter
 from scatterbackup.generation import GenerationRange
+from scatterbackup.util import sb_init
 
 
-def make_case_insensitive(pattern):
+def make_case_insensitive(pattern: str) -> str:
     result = ""
     in_class = False
     for c in pattern:
@@ -44,7 +47,7 @@ def make_case_insensitive(pattern):
     return result
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Query the ScatterBackup database')
     parser.add_argument('PATH', action='store', type=str, nargs='*', default=[],
                         help='PATH to query')
@@ -79,22 +82,22 @@ def parse_args():
     return parser.parse_args()
 
 
-def process_fileinfo_json(fileinfo):
+def process_fileinfo_json(fileinfo: FileInfo) -> None:
     print(fileinfo.json())
 
 
-def process_fileinfo_format(fileinfo, fmt):
+def process_fileinfo_format(fileinfo: FileInfo, fmt: str) -> None:
     print(fmt.format_map(FileInfoFormatter(fileinfo)))
 
 
-def process_fileinfo(fileinfo, print_fun, context):
+def process_fileinfo(fileinfo: Optional[FileInfo], print_fun: Callable[[FileInfo], None], context: str) -> None:
     if fileinfo is None:
         print("{}: error: query returned no results".format(context), file=sys.stderr)
     else:
         print_fun(fileinfo)
 
 
-def main():
+def main() -> None:
     sb_init()
 
     args = parse_args()
@@ -113,7 +116,7 @@ def main():
         else:
             fmt = "{mode} {owner:8} {group:8} {size:>8} {time} {path}"
 
-        def my_print_fun(fileinfo):
+        def my_print_fun(fileinfo: FileInfo) -> None:
             process_fileinfo_format(fileinfo, fmt)
 
         print_fun = my_print_fun

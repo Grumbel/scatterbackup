@@ -58,7 +58,7 @@ def size2bytes(text: str) -> int:
         raise Exception("couldn't interpret {!r}".format(text))
 
 
-def bytes2human_decimal(count):
+def bytes2human_decimal(count: int) -> str:
     """Returns size formated as a human readable string"""
 
     if count < 1000:
@@ -81,7 +81,7 @@ def bytes2human_decimal(count):
         return "{:.2f}YB".format(count / 1000**10)
 
 
-def bytes2human_binary(count):
+def bytes2human_binary(count: int) -> str:
     """Returns size formated as a human readable string"""
 
     if count < 1024:

@@ -22,10 +22,10 @@ import scatterbackup
 import scatterbackup.database
 import scatterbackup.config
 from scatterbackup.units import bytes2human_decimal
-from scatterbackup.util import sb_init
+from scatterbackup.util import sb_init, make_default_database
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Print disk usage')
     parser.add_argument('PATH', action='store', type=str, nargs='*',
                         help='Path to process')
@@ -38,7 +38,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def main() -> None:
     sb_init()
 
     args = parse_args()
@@ -46,7 +46,7 @@ def main():
     cfg = scatterbackup.config.Config()
     cfg.load(args.config)
 
-    db = scatterbackup.database.Database(args.database or scatterbackup.util.make_default_database())
+    db = scatterbackup.database.Database(args.database or make_default_database())
 
     file_count = 0
     total_bytes = 0
@@ -57,6 +57,7 @@ def main():
             if not args.summarize:
                 print("{:10}  {}".format(fileinfo.size, fileinfo.path))
             file_count += 1
+            assert fileinfo.size is not None
             total_bytes += fileinfo.size
 
     print("Total: {} in {} files".format(bytes2human_decimal(total_bytes), file_count))

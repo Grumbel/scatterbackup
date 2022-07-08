@@ -15,10 +15,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from typing import Optional
+
 import datetime
 
 
-def format_time(t):
+def format_time(t: Optional[float]) -> str:
     if t is None:
         return "     <unknown>      "
     else:

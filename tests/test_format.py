@@ -23,7 +23,7 @@ from scatterbackup.format import FileInfoFormatter, Bytes
 
 class FormatTestCase(unittest.TestCase):
 
-    def test_bytes(self):
+    def test_bytes(self) -> None:
         b = Bytes(592023984)
         self.assertEqual("592.02MB", "{::MB}".format(b))
         self.assertEqual("564.60MiB", "{::MiB}".format(b))
@@ -34,7 +34,7 @@ class FormatTestCase(unittest.TestCase):
         self.assertEqual("592.02MB", "{}".format(b))
         self.assertEqual("564.60MiB", "{::H}".format(b))
 
-    def test_format(self):
+    def test_format(self) -> None:
         fileinfo = FileInfo.from_file("tests/data/test.txt")
         fi_map = FileInfoFormatter(fileinfo)
         self.assertEqual("0.00MB", "{size::MB}".format_map(fi_map))

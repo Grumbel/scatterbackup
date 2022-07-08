@@ -27,28 +27,29 @@ from scatterbackup.generation import GenerationRange
 
 class DatabaseTestCase(unittest.TestCase):
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.db = Database(":memory:")
         self.db.init_tables()
         self.db.store(FileInfo.from_file("tests/data/test.txt"))
         self.db.store(FileInfo.from_file("tests/data/symlink.lnk"))
         self.db.store(FileInfo.from_file("tests/data/subdir/test.txt"))
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         del self.db
 
-    def test_get_by_path(self):
+    def test_get_by_path(self) -> None:
         fileinfo = self.db.get_one_by_path(os.path.abspath("tests/data/test.txt"))
+        assert fileinfo is not None
         self.assertEqual(fileinfo.path, os.path.abspath("tests/data/test.txt"))
         self.assertIsNone(self.db.get_one_by_path(os.path.abspath("non-existing-file.txt")))
 
-    def test_get_directory_by_path(self):
+    def test_get_directory_by_path(self) -> None:
         fileinfos = list(self.db.get_directory_by_path(os.path.abspath("tests/data/")))
         self.assertEqual(len(fileinfos), 2)
         self.assertEqual(fileinfos[0].path, os.path.abspath("tests/data/test.txt"))
         self.assertEqual(fileinfos[1].path, os.path.abspath("tests/data/symlink.lnk"))
 
-    def test_get_duplicates(self):
+    def test_get_duplicates(self) -> None:
         results = list(self.db.get_duplicates(os.path.abspath("tests/data/")))
         self.assertEqual(len(results), 1)
         self.assertEqual(len(results[0]), 2)
@@ -56,7 +57,7 @@ class DatabaseTestCase(unittest.TestCase):
         self.assertEqual(results[0][0].path, os.path.abspath("tests/data/subdir/test.txt"))
         self.assertEqual(results[0][1].path, os.path.abspath("tests/data/test.txt"))
 
-    def test_get_by_glob(self):
+    def test_get_by_glob(self) -> None:
         results = list(self.db.get_by_glob(os.path.abspath("tests/*.txt")))
         self.assertEqual(len(results), 2)
         results.sort(key=lambda fi: fi.path)
@@ -70,11 +71,11 @@ class DatabaseTestCase(unittest.TestCase):
         next(gen2)
         next(gen)  # this will throw if the generator gets invalidaded by cursor reuse
 
-    def test_get_all(self):
+    def test_get_all(self) -> None:
         results = list(self.db.get_all())
         self.assertEqual(len(results), 3)
 
-    def test_get_generation(self):
+    def test_get_generation(self) -> None:
         gens = self.db.get_generations(GenerationRange(0, 100))
         self.assertEqual(len(gens), 0)
 

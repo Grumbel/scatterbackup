@@ -15,6 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from typing import Optional
+
 import os
 import logging
 import yaml
@@ -24,11 +26,11 @@ import scatterbackup.util
 
 class Config:
 
-    def __init__(self):
-        self.excludes = []
-        self.defaults = []
+    def __init__(self) -> None:
+        self.excludes: list[str] = []
+        self.defaults: list[str] = []
 
-    def load(self, filename=None):
+    def load(self, filename: Optional[str] = None) -> None:
         if filename is None:
             config_dir = scatterbackup.util.make_config_directory()
             filename = os.path.join(config_dir, "config.yaml")

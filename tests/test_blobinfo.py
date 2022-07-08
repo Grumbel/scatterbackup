@@ -23,7 +23,7 @@ from scatterbackup import BlobInfo
 
 class BlobInfoTestCase(unittest.TestCase):
 
-    def test_from_file(self):
+    def test_from_file(self) -> None:
         blobinfo = BlobInfo.from_file("tests/data/test.txt")
         self.assertEqual(11, blobinfo.size)
         self.assertEqual("6df4d50a41a5d20bc4faad8a6f09aa8f", blobinfo.md5)

@@ -22,7 +22,7 @@ from scatterbackup.sql import WHERE, AND, OR
 
 class SQLTestCase(unittest.TestCase):
 
-    def test_sql(self):
+    def test_sql(self) -> None:
         self.assertEqual(WHERE(""), "")
         self.assertEqual(WHERE("1 < 2"), "WHERE 1 < 2")
 

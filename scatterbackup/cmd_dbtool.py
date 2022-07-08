@@ -19,9 +19,10 @@ import logging
 import argparse
 
 import scatterbackup.database
+import scatterbackup.sbtr
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='scatterbackup database tool')
     parser.add_argument('-d', '--database', metavar='FILE', action='store', type=str, nargs=1,
                         help='database file to use')
@@ -30,7 +31,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def main() -> None:
     logging.basicConfig(level=logging.DEBUG)
 
     args = parse_args()

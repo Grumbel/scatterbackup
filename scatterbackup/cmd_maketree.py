@@ -15,25 +15,29 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from typing import Callable, IO, Optional
+
 import argparse
 import sys
 
 import scatterbackup
+from scatterbackup.database import Database
 from scatterbackup.generator import generate_fileinfos
+from scatterbackup.fileinfo import FileInfo
 
 
-def on_report(fileinfo, fout=sys.stdout):
+def on_report(fileinfo: FileInfo, fout: IO[str] = sys.stdout) -> None:
     fout.write(fileinfo.json())
     fout.write("\n")
 
 
-def on_error(err):
+def on_error(err: OSError) -> None:
     sys.stderr.write("{}: cannot process path: {}: {}\n".format(
         sys.argv[0], err.filename, err.strerror))
 
 
-def process_directory(directory, checksums, relative, prefix,
-                      on_report_cb):
+def process_directory(directory: str, checksums: bool, relative: bool, prefix: str,
+                      on_report_cb: Callable[[FileInfo], None]) -> None:
     if prefix is not None:
         relative = True
 
@@ -45,7 +49,7 @@ def process_directory(directory, checksums, relative, prefix,
         on_report_cb(fileinfo)
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description='Collect FileInfo')
     parser.add_argument('DIRECTORY', action='store', type=str, nargs='+',
                         help='directory containing the mod')
@@ -69,19 +73,21 @@ def main():
                         help="Set the output filename")
     args = parser.parse_args()
 
-    on_report_cb = on_report
+    on_report_cb: Callable[[FileInfo], None] = on_report
     if args.output:
         fout = open(args.output, "w")
 
-        def on_report_with_file(fileinfo, fout=fout):
+        def on_report_with_file(fileinfo: FileInfo, fout: IO[str] = fout) -> None:
             on_report(fileinfo, fout)
 
         on_report_cb = on_report_with_file
 
-    if args.database:
+    db: Optional[Database] = None
+    if args.database is not None:
         db = scatterbackup.Database(args.database)
 
-        def on_report_with_database(fileinfo):
+        def on_report_with_database(fileinfo: FileInfo) -> None:
+            assert db is not None
             db.store(fileinfo)
 
         on_report_cb = on_report_with_database
@@ -89,7 +95,7 @@ def main():
     for d in args.DIRECTORY:
         process_directory(d, not args.no_checksum, args.relative, args.prefix, on_report_cb)
 
-    if args.database:
+    if db is not None:
         db.commit()
 
 

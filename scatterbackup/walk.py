@@ -2,14 +2,38 @@
 
 # See https://docs.python.org/3/license.html for license information
 
+from typing import Any, Callable, Generator, Optional, Sequence, Tuple, Union
 
-from os import scandir, path, name, stat, st, listdir
+import sys
+
+import stat
+import os
+from os import scandir, path, name, listdir, PathLike, DirEntry
+
+
+def walk(top: Union[str, PathLike[str]], topdown: bool = True,
+         onerror: Optional[Callable[[OSError], None]] = None,
+         followlinks: bool = False,
+         maxdepth: Optional[int] = None) -> Generator[Tuple[Union[str, PathLike[str]],
+                                                            list[Union[str, PathLike[str]]],
+                                                            list[Union[str, PathLike[str]]]],
+                                                      None, None]:
+    if maxdepth is None:
+        maxdepth = sys.maxsize
+    return _walk(top, topdown, onerror, followlinks, maxdepth, depth=1)
 
 
 # This is the os.walk() function from Python-3.5.2, modified such that
 # it returns symlinks to directories in the 'nodirs' portion of the
 # result tuple instead of the 'dirs' one.
-def walk(top, topdown=True, onerror=None, followlinks=False):
+def _walk(top: Union[str, PathLike[str]], topdown: bool,
+          onerror: Optional[Callable[[OSError], None]],
+          followlinks: bool,
+          maxdepth: int,
+          depth: int) -> Generator[Tuple[Union[str, PathLike[str]],
+                                         list[Union[str, PathLike[str]]],
+                                         list[Union[str, PathLike[str]]]],
+                                   None, None]:
     """Directory tree generator.
 
     For each directory in the directory tree rooted at top (including top
@@ -77,13 +101,13 @@ def walk(top, topdown=True, onerror=None, followlinks=False):
     # minor reason when (say) a thousand readable directories are still
     # left to visit.  That logic is copied here.
     try:
-        if name == 'nt' and isinstance(top, bytes):
+        if name == 'nt' and isinstance(top, bytes):  # type: ignore
             scandir_it = _dummy_scandir(top)
         else:
             # Note that scandir is global in this module due
             # to earlier import-*.
             scandir_it = scandir(top)
-        entries = list(scandir_it)
+        entries: Sequence[DirEntry[str]] = list(scandir_it)
     except OSError as error:
         if onerror is not None:
             onerror(error)
@@ -119,11 +143,12 @@ def walk(top, topdown=True, onerror=None, followlinks=False):
                 walk_into = not is_symlink
 
             if walk_into:
-                yield from walk(entry.path, topdown, onerror, followlinks)
+                if depth < maxdepth:
+                    yield from _walk(entry.path, topdown, onerror, followlinks, maxdepth, depth + 1)
 
     # Yield before recursion if going top down
     if topdown:
-        yield top, dirs, nondirs
+        yield top, dirs, nondirs  # type: ignore
 
         # Recurse into sub-directories
         islink, join = path.islink, path.join
@@ -134,10 +159,11 @@ def walk(top, topdown=True, onerror=None, followlinks=False):
             # the caller can replace the directory entry during the "yield"
             # above.
             if followlinks or not islink(new_path):
-                yield from walk(new_path, topdown, onerror, followlinks)
+                if depth < maxdepth:
+                    yield from _walk(new_path, topdown, onerror, followlinks, maxdepth, depth + 1)
     else:
         # Yield after recursion if going bottom up
-        yield top, dirs, nondirs
+        yield top, dirs, nondirs  # type: ignore
 
 
 class _DummyDirEntry:
@@ -148,43 +174,43 @@ class _DummyDirEntry:
     links.
     """
 
-    def __init__(self, dir, name):
+    def __init__(self, dir: Union[str, PathLike[str]], name: Union[str, PathLike[str]]) -> None:
         self.name = name
         self.path = path.join(dir, name)
         # Mimick FindFirstFile/FindNextFile: we should get file attributes
         # while iterating on a directory
-        self._stat = None
-        self._lstat = None
+        self._stat: Optional[os.stat_result] = None
+        self._lstat: Optional[os.stat_result] = None
         try:
             self.stat(follow_symlinks=False)
         except OSError:
             pass
 
-    def stat(self, *, follow_symlinks=True):
+    def stat(self, *, follow_symlinks: bool = True) -> os.stat_result:
         if follow_symlinks:
             if self._stat is None:
-                self._stat = stat(self.path)
+                self._stat = os.stat(self.path)
             return self._stat
         else:
             if self._lstat is None:
-                self._lstat = stat(self.path, follow_symlinks=False)
+                self._lstat = os.stat(self.path, follow_symlinks=False)
             return self._lstat
 
-    def is_dir(self):
+    def is_dir(self) -> bool:
         if self._lstat is not None and not self.is_symlink():
             # use the cache lstat
-            stat = self.stat(follow_symlinks=False)
-            return st.S_ISDIR(stat.st_mode)
+            result = self.stat(follow_symlinks=False)
+            return bool(stat.S_ISDIR(result.st_mode))
 
-        stat = self.stat()
-        return st.S_ISDIR(stat.st_mode)
+        result = self.stat()
+        return bool(stat.S_ISDIR(result.st_mode))
 
-    def is_symlink(self):
-        stat = self.stat(follow_symlinks=False)
-        return st.S_ISLNK(stat.st_mode)
+    def is_symlink(self) -> bool:
+        result = self.stat(follow_symlinks=False)
+        return bool(stat.S_ISLNK(result.st_mode))
 
 
-def _dummy_scandir(dir):
+def _dummy_scandir(dir: Union[str, PathLike[str]]) -> Any:
     # listdir-based implementation for bytes patches on Windows
     for n in listdir(dir):
         yield _DummyDirEntry(dir, n)

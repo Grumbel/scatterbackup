@@ -17,10 +17,13 @@
 
 import argparse
 import os
+
 import scatterbackup.sbtr
+from scatterbackup.fileinfo import FileInfo
+from scatterbackup.blobinfo import BlobInfo
 
 
-def same_file(fileinfo1, fileinfo2):
+def same_file(fileinfo1: FileInfo, fileinfo2: FileInfo) -> bool:
     if fileinfo1.kind != fileinfo2.kind:
         return False
     elif fileinfo1.blob is not None and fileinfo2.blob is not None:
@@ -30,30 +33,31 @@ def same_file(fileinfo1, fileinfo2):
                 fileinfo1.size == fileinfo2.size)
 
 
-def same_content(fileinfo1, fileinfo2):
+def same_content(fileinfo1: FileInfo, fileinfo2: FileInfo) -> bool:
     if fileinfo1.blob is None or fileinfo2.blob is None:
         return True  # this is wobbly
     else:
         return fileinfo1.blob == fileinfo2.blob
 
 
-def filter_tree(tree, prefix):
-    result = {}
+def filter_tree(tree: dict[str, FileInfo], prefix: str) -> dict[str, FileInfo]:
+    result: dict[str, FileInfo] = {}
     for k, v in tree.items():
         if k.startswith(prefix):
             result[k] = v
     return result
 
 
-def diff(tree1, tree2):
-    paths = set()
+def diff(tree1: dict[str, FileInfo], tree2: dict[str, FileInfo]) -> None:
+    paths: set[str] = set()
     paths.update(tree1.keys())
     paths.update(tree2.keys())
 
     for k in sorted(paths):
         if k not in tree1:
             if tree2[k].blob is not None:
-                print(tree2[k].blob.md5, "added", k)
+                blob_info: BlobInfo = tree2[k].blob  # type: ignore
+                print(blob_info.md5, "added", k)
         elif k not in tree2:
             print("deleted", k)
         else:
@@ -61,10 +65,12 @@ def diff(tree1, tree2):
                 pass
             else:
                 if tree1[k].size != tree2[k].size:
-                    print(tree1[k].size - tree2[k].size, "modified", k, "size:", tree1[k].size, tree2[k].size)
+                    print(tree1[k].size - tree2[k].size,  # type: ignore
+                          "modified", k, "size:",
+                          tree1[k].size, tree2[k].size)
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description='Compare two .sbtr files')
     parser.add_argument('FILE1', action='store', type=str, nargs=1,
                         help='.sbtr file or directory')

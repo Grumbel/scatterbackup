@@ -15,28 +15,32 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from typing import IO, Optional
+
 import sys
 import argparse
+
+from scatterbackup.fileinfo import FileInfo
 from scatterbackup.generator import generate_fileinfos
 from scatterbackup.units import size2bytes
 
 
 class DupfinderState:
 
-    def __init__(self, filename, fd):
+    def __init__(self, filename: str, fd: IO[bytes]) -> None:
         self.filename = filename
         self.fd = fd
-        self.block = None
+        self.block: Optional[bytes] = None
 
 
-def find_duplicates_fd(files):
+def find_duplicates_fd(files: list[DupfinderState]) -> list[list[DupfinderState]]:
     if len(files) == 1:
         return [files]
 
     for f in files:
         f.block = f.fd.read(1024 * 1024)
 
-    groups = []
+    groups: list[list[DupfinderState]] = []
     for f in files:
         found = False
         for g in groups:
@@ -58,8 +62,8 @@ def find_duplicates_fd(files):
     return ngroups
 
 
-def find_duplicates(filenames):
-    fds = []
+def find_duplicates(filenames: list[str]) -> list[list[str]]:
+    fds: list[DupfinderState] = []
     try:
         for filename in filenames:
             fds.append(DupfinderState(filename,
@@ -72,7 +76,7 @@ def find_duplicates(filenames):
             fd.fd.close()
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Find duplicate files')
     parser.add_argument('FILES', action='store', type=str, nargs='+',
                         help='files or directories to search')
@@ -87,7 +91,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def main() -> None:
     # FIXME: this is a hack, see find_duplicates_fd() above
     sys.setrecursionlimit(10000)
 
@@ -101,9 +105,10 @@ def main():
             else:
                 pass  # ignore non-files
 
-    fileinfos_by_size = {}
+    fileinfos_by_size: dict[int, list[FileInfo]] = {}
     for fileinfo in fileinfos:
         if fileinfo.size not in fileinfos_by_size:
+            assert fileinfo.size is not None
             fileinfos_by_size[fileinfo.size] = []
         fileinfos_by_size[fileinfo.size].append(fileinfo)
 

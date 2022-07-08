@@ -15,6 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from typing import IO, Iterator, Optional, Sequence, TypeVar
+
 import argparse
 import sys
 import shlex
@@ -26,7 +28,7 @@ import scatterbackup.util
 import scatterbackup.config
 from scatterbackup.util import sb_init, full_join, split
 from scatterbackup.generator import scan_fileinfos
-from scatterbackup.database import Database, NullDatabase
+from scatterbackup.database import Database, NullDatabase, IDatabase
 from scatterbackup.fileinfo import FileInfo
 
 # sb-update / -v -n
@@ -34,16 +36,19 @@ from scatterbackup.fileinfo import FileInfo
 # sb-update -i .sbtr
 
 
-def on_report_with_database(db, fileinfo):
+T = TypeVar('T')
+
+
+def on_report_with_database(db: IDatabase, fileinfo: FileInfo) -> None:
     db.store(fileinfo)
 
 
-def on_report(fileinfo, fout=sys.stdout):
+def on_report(fileinfo: FileInfo, fout: IO[str] = sys.stdout) -> None:
     fout.write(fileinfo.json())
     fout.write("\n")
 
 
-def file_changed(lhs, rhs):
+def file_changed(lhs: FileInfo, rhs: FileInfo) -> bool:
     if lhs != rhs:
         # for k, v in lhs.__dict__.items():
         #     if rhs.__dict__[k] != v:
@@ -53,36 +58,41 @@ def file_changed(lhs, rhs):
         return False
 
 
-def fileinfos_split(fileinfos):
+def fileinfos_split(fileinfos: Sequence[FileInfo]) -> tuple[list[FileInfo], list[FileInfo]]:
     return split(lambda el: el.kind == "directory", fileinfos)
 
 
-def join_fileinfos(lhs, rhs):
-    return full_join(lhs, rhs, lambda fileinfo: fileinfo.path)
+def join_fileinfos(lhs: Sequence[FileInfo], rhs: Sequence[FileInfo]) -> Iterator[tuple[Optional[FileInfo],
+                                                                                       Optional[FileInfo]]]:
+
+    def fileinfo_to_path(fileinfo: FileInfo) -> str:
+        return fileinfo.path
+
+    return full_join(lhs, rhs, fileinfo_to_path)  # type: ignore
 
 
 class UpdateAction:
 
-    def __init__(self, db):
+    def __init__(self, db: IDatabase) -> None:
         self.db = db
         self.verbose = 0
         self.checksums = True
         self.relative = False
         self.prefix = None
-        self.excludes = []
+        self.excludes: list[str] = []
 
-    def log_error(self, err):
+    def log_error(self, err: OSError) -> None:
         # pylint: disable=no-self-use
         print("{}: cannot process path: {}: {}"
               .format(sys.argv[0], err.filename, err.strerror),
               file=sys.stderr)
 
-    def log_info(self, verbose, msg):
+    def log_info(self, verbose: int, msg: str) -> None:
         # pylint: disable=no-self-use
         if self.verbose >= verbose:
             print(msg)
 
-    def add_checksums(self, fi, ref):
+    def add_checksums(self, fi: FileInfo, ref: Optional[FileInfo]) -> None:
         if fi.kind != 'file':
             return  # no checksum needed
 
@@ -101,12 +111,13 @@ class UpdateAction:
             except OSError as err:
                 self.log_error(err)
 
-    def process_dirs(self, fs_dirs, db_dirs):
+    def process_dirs(self, fs_dirs: Sequence[FileInfo], db_dirs: Sequence[FileInfo]) -> None:
         joined = join_fileinfos(fs_dirs, db_dirs)
         # for f, d in joined:
         #     print("   fs: {!r:40} db: {!r:40}".format(f, d))
         for fs_fi, db_fi in joined:
             if fs_fi is None:
+                assert db_fi is not None
                 self.log_info(1, "{}: directory removed".format(db_fi.path))
                 self.db.mark_removed_recursive(db_fi)
             elif db_fi is None:
@@ -122,12 +133,13 @@ class UpdateAction:
                 else:
                     self.log_info(3, "{}: directory already in db, nothing to do".format(fs_fi.path))
 
-    def process_files(self, fs_files, db_files):
+    def process_files(self, fs_files: Sequence[FileInfo], db_files: Sequence[FileInfo]) -> None:
         joined = join_fileinfos(fs_files, db_files)
         # for f, d in joined:
         #   print("   fs: {!r:40} db: {!r:40}".format(f, d))
         for fs_fi, db_fi in joined:
             if fs_fi is None:
+                assert db_fi is not None
                 self.log_info(1, "{}: file removed".format(db_fi.path))
                 self.db.mark_removed(db_fi)
             elif db_fi is None:
@@ -147,7 +159,7 @@ class UpdateAction:
                 else:
                     self.log_info(3, "{}: file already in db, nothing to do".format(fs_fi.path))
 
-    def process_directory(self, fi_fs, recursive=True):
+    def process_directory(self, fi_fs: FileInfo, recursive: bool = True) -> None:
         # root directory
         fi_db = self.db.get_one_by_path(fi_fs.path)
         self.process_dirs([fi_fs],
@@ -162,22 +174,22 @@ class UpdateAction:
                                 onerror=self.log_error)
 
         if not recursive:
-            fs_gen = [next(fs_gen)]
+            fs_gen = iter([next(fs_gen)])
 
         for root, fs_dirs, fs_files in fs_gen:
             self.log_info(2, "processing {}".format(root))
             result = self.db.get_directory_by_path(root)
-            db_dirs, db_files = fileinfos_split(result)
+            db_dirs, db_files = fileinfos_split(list(result))
 
             self.process_dirs(fs_dirs, db_dirs)
             self.process_files(fs_files, db_files)
 
-    def process_file(self, fi_fs):
+    def process_file(self, fi_fs: FileInfo) -> None:
         fi_db = self.db.get_one_by_path(fi_fs.path)
         self.process_files([fi_fs],
                            [fi_db] if fi_db is not None else [])
 
-    def process_path(self, path, recursive=True):
+    def process_path(self, path: str, recursive: bool = True) -> None:
         fi = FileInfo.from_file(path)
         if fi.kind == "directory":
             self.process_directory(fi)
@@ -185,7 +197,7 @@ class UpdateAction:
             self.process_file(fi)
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Collect FileInfo')
     parser.add_argument('PATH', action='store', type=str, nargs='*',
                         help='PATH to process')
@@ -216,7 +228,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def main() -> None:
     sb_init()
 
     args = parse_args()
@@ -224,6 +236,7 @@ def main():
     cfg = scatterbackup.config.Config()
     cfg.load(args.config)
 
+    db: IDatabase
     if args.dry_run:
         db = NullDatabase()
     else:
@@ -234,8 +247,8 @@ def main():
     try:
         if args.import_file:
             # suspend auto-commit triggering on import
-            db.max_insert_count = None
-            db.max_insert_size = None
+            # db.max_insert_count = None
+            # db.max_insert_size = None
 
             with scatterbackup.sbtr.open_sbtr(args.import_file) as fin:
                 i = 0
@@ -253,7 +266,7 @@ def main():
                 for p in paths:
                     print("  {}".format(p))
             else:
-                paths = (os.path.abspath(d) for d in args.PATH)
+                paths = [os.path.abspath(d) for d in args.PATH]
 
             for path in paths:
                 update = UpdateAction(db)

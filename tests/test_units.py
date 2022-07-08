@@ -24,7 +24,7 @@ from scatterbackup.units import size2bytes
 
 class UnitsTestCase(unittest.TestCase):
 
-    def test_size2bytes(self):
+    def test_size2bytes(self) -> None:
         # basic units
         self.assertEqual(1234, size2bytes("1234"))
 
