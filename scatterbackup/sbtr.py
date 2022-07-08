@@ -47,12 +47,14 @@ def fileinfos_from_sbtr(filename):
     return result
 
 
-def fileinfos_from_path(path):
+def fileinfos_from_path(path, checksums=True, relative=False):
     """Read FileInfo objects from path, which can be a .sbtr, .sbtr.gz or directory"""
     if os.path.isdir(path):
         return {fileinfo.path: fileinfo for
-                fileinfo in generate_fileinfos(path, checksums=True)}
+                fileinfo in generate_fileinfos(path, checksums=checksums, relative=relative)}
     else:
+        # ignoring `checksums` and `relative` here, we have to use
+        # what is stored in the .sbtr
         return fileinfos_from_sbtr(path)
 
 

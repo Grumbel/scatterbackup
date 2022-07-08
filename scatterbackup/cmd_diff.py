@@ -70,18 +70,38 @@ def main():
                         help='.sbtr file or directory')
     parser.add_argument('FILE2', action='store', type=str, nargs=1,
                         help='.sbtr file or directory')
+
+    # This is a bit of a mess, .sbtr files contain a path, so there
+    # needs to be an option to select a sub-path from them.
+    # Directories on the other side are already relative to their
+    # origin, so this isn't needed
+
+    # Allow four arguments: foo.sbtr / bar.sbtr /backup/
     parser.add_argument('-p', '--prefix', type=str, default=None, metavar="PREFIX",
                         help="Limit comparism to files under PREFIX")
+
+    # FIXME: the top level directory is still part of the path with
+    # this option, not a good thing
+    parser.add_argument('-R', '--relative', action='store_true', default=False,
+                        help="Compare relative path instead of absolute")
+
+    parser.add_argument('-c', '--checksums', action='store_true', default=False,
+                        help="Generate checksums for an exact comparism")
+
+    parser.add_argument('-v', '--verbose', action='store_true', default=False,
+                        help="Be more verbose")
+
     args = parser.parse_args()
 
-    tree1 = scatterbackup.sbtr.fileinfos_from_path(args.FILE1[0])
-    tree2 = scatterbackup.sbtr.fileinfos_from_path(args.FILE2[0])
+    tree1 = scatterbackup.sbtr.fileinfos_from_path(args.FILE1[0], relative=args.relative, checksums=args.checksums)
+    tree2 = scatterbackup.sbtr.fileinfos_from_path(args.FILE2[0], relative=args.relative, checksums=args.checksums)
 
     if args.prefix is not None:
         prefix = os.path.normpath(args.prefix)
         tree1 = filter_tree(tree1, prefix)
         tree2 = filter_tree(tree2, prefix)
 
+    print(tree1)
     diff(tree1, tree2)
 
 
