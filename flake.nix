@@ -24,10 +24,22 @@
             pname = "scatterbackup";
             version = "0.1.0";
             src = nixpkgs.lib.cleanSource ./.;
-            doCheck = false;
+            doCheck = true;
+            checkPhase = ''
+              runHook preCheck
+              flake8 scatterbackup tests
+              pyright scatterbackup tests
+              mypy -p scatterbackup -p tests
+              # pylint scatterbackup tests
+              python3 -m unittest discover -v -s tests/
+              runHook postCheck
+            '';
             nativeBuildInputs = with pythonPackages; [
               flake8
               pylint
+              mypy
+            ] ++ [
+              pkgs.pyright
             ];
             propagatedBuildInputs = with pythonPackages; [
               pyparsing
