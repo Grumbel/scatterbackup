@@ -11,6 +11,15 @@
         pythonPackages = pkgs.python310Packages;
       in rec {
         packages = flake-utils.lib.flattenTree rec {
+          types-pyyaml = pythonPackages.buildPythonPackage rec {
+            pname = "types-PyYAML";
+            version = "6.0.9";
+            src = pythonPackages.fetchPypi {
+              inherit pname version;
+              sha256 = "sha256-M651yEuPYf3fDGPpx+VX252xaUrTwu6GKOxe/rtaXps=";
+            };
+          };
+
           scatterbackup = pythonPackages.buildPythonPackage rec {
             pname = "scatterbackup";
             version = "0.1.0";
@@ -24,6 +33,9 @@
               pyparsing
               pyyaml
               pyxdg
+              types-setuptools
+            ] ++ [
+              types-pyyaml
             ];
           };
           default = scatterbackup;
