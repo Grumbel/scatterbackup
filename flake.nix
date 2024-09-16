@@ -8,7 +8,7 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        pythonPackages = pkgs.python310Packages;
+        pythonPackages = pkgs.python3Packages;
 
         types-pyyaml = pythonPackages.buildPythonPackage rec {
           pname = "types-PyYAML";
